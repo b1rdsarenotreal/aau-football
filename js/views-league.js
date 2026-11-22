@@ -1,21 +1,21 @@
 // League pages: teams, team profiles, conferences, history, settings.
 
-import { readAauLogos, applyAauLogos, DEFAULT_LOGOS } from './logo-import.js?v=20261122131034';
-import { AAU_SCHOOLS, AAU_CONFERENCES, AAU_PROGRAMS } from './aau-schools.js?v=20261122131034';
-import { realignmentFor, applyRealignment, skipRealignment, JOIN_RATING, onRealignmentLoaded } from './realign.js?v=20261122131034';
-import { ctx, S, app, modal, $, $$, esc, toast, changed, persist, flushSave, cache, team, teamInfo, logoImg, teamOptions, teamHref, confLogo, confHref, confInfo, confColor, imageFileToDataUrl, readableOn, openGame, resultText, periodNote, gameDateOf, seasonLabel, seasonSpan } from './ui.js?v=20261122131034';
-import { isFinal, winnerOf, resultFor, records, rpi, rating, indexName, usesNpi, confStandings, regSeasonChamp, regSeasonChamps, isIndependent } from './standings.js?v=20261122131034';
-import { ovr } from './sim.js?v=20261122131034';
-import { latestPoll, pollRankMap, pollSizeOf, POLL_SIZES, DEFAULT_POLL_SIZE } from './polls.js?v=20261122131034';
-import { addTeam, removeTeam, renameTeam, addConference, renameConference, deleteConference, rebuildSchedule, startNextSeason, weekName, newLeague, beginOffseason, draftRemoveTeam, draftRestoreTeam, draftWarnings, coachName, coachSchool, hireCoach, newCoach, availableCoaches, backfillHitsErrors, placeRemaining, clearPoints, pointsLeft, migrateLeague, applyAlignment, canApplyAlignment, syncCoachBonus, devTotal, coachResumes, coachPrestige, prestigeLabel, coachBonus, programPrestiges, programLabel, fitLabel, defaultSettings } from './league.js?v=20261122131034';
-import { hotSeat, HEAT } from './hotseat.js?v=20261122131034';
-import { setRating } from './ratings.js?v=20261122131034';
-import { confFormatName, aqConferences, aqMinOf, postseasonFinish, postseasonDetail, postseasonRecord, wsTeams, postWeeks, regWeeksOf, ncaaConfig, ncaaProblems, fieldSize, hasSupers, formatSummary, proposeField, DEFAULT_NCAA, mcwsVenue, allEvents, gameVenue } from './postseason.js?v=20261122131034';
-import { DEFAULT_TOURNEY_WEEKS, DEFAULT_REG_WEEKS, DEFAULT_CONF_MATCHES, DEFAULT_MAX_MATCHES, confTarget } from './schedule.js?v=20261122131034';
-import { exportLeague, clearLeague } from './store.js?v=20261122131034';
-import { conferencesFor, sideOf } from './data.js?v=20261122131034';
-import { clamp, fmtPct } from './util.js?v=20261122131034';
-import { recordBook, teamPollHistory, headToHead } from './records.js?v=20261122131034';
+import { readAauLogos, applyAauLogos, DEFAULT_LOGOS } from './logo-import.js?v=20261122132201';
+import { AAU_SCHOOLS, AAU_CONFERENCES, AAU_PROGRAMS } from './aau-schools.js?v=20261122132201';
+import { realignmentFor, applyRealignment, skipRealignment, JOIN_RATING, onRealignmentLoaded } from './realign.js?v=20261122132201';
+import { ctx, S, app, modal, $, $$, esc, toast, changed, persist, flushSave, cache, team, teamInfo, logoImg, teamOptions, teamHref, confLogo, confHref, confInfo, confColor, imageFileToDataUrl, readableOn, openGame, resultText, periodNote, gameDateOf, seasonLabel, seasonSpan } from './ui.js?v=20261122132201';
+import { isFinal, winnerOf, resultFor, records, rpi, rating, indexName, usesNpi, confStandings, regSeasonChamp, regSeasonChamps, isIndependent } from './standings.js?v=20261122132201';
+import { ovr } from './sim.js?v=20261122132201';
+import { latestPoll, pollRankMap, pollSizeOf, POLL_SIZES, DEFAULT_POLL_SIZE } from './polls.js?v=20261122132201';
+import { addTeam, removeTeam, renameTeam, addConference, renameConference, deleteConference, rebuildSchedule, startNextSeason, weekName, newLeague, beginOffseason, draftRemoveTeam, draftRestoreTeam, draftWarnings, coachName, coachSchool, hireCoach, newCoach, availableCoaches, backfillHitsErrors, placeRemaining, clearPoints, pointsLeft, migrateLeague, applyAlignment, canApplyAlignment, syncCoachBonus, devTotal, coachResumes, coachPrestige, prestigeLabel, coachBonus, programPrestiges, programLabel, fitLabel, defaultSettings } from './league.js?v=20261122132201';
+import { hotSeat, HEAT } from './hotseat.js?v=20261122132201';
+import { setRating } from './ratings.js?v=20261122132201';
+import { confFormatName, aqConferences, aqMinOf, postseasonFinish, postseasonDetail, postseasonRecord, wsTeams, postWeeks, regWeeksOf, ncaaConfig, ncaaProblems, fieldSize, hasSupers, formatSummary, proposeField, DEFAULT_NCAA, mcwsVenue, allEvents, gameVenue } from './postseason.js?v=20261122132201';
+import { DEFAULT_TOURNEY_WEEKS, DEFAULT_REG_WEEKS, DEFAULT_CONF_MATCHES, DEFAULT_MAX_MATCHES, confTarget, rivalriesOf } from './schedule.js?v=20261122132201';
+import { exportLeague, clearLeague } from './store.js?v=20261122132201';
+import { conferencesFor, sideOf } from './data.js?v=20261122132201';
+import { clamp, fmtPct } from './util.js?v=20261122132201';
+import { recordBook, teamPollHistory, headToHead } from './records.js?v=20261122132201';
 
 const ui = { confFilter: '', ncaaDraft: null, teamSort: { k: 'ovr', dir: -1 }, coachSort: { k: 'now', dir: -1 }, teamTab: 'season', h2hSort: { k: 'g', dir: -1 }, h2hFilter: 'all', memberSort: { k: 'titles', dir: -1 } };
 
@@ -1094,6 +1094,12 @@ export function renderSettings() {
         <div class="row"><button class="btn primary" id="n-save" ${probs.length || !ncDirty ? 'disabled' : ''}>Save tournament format</button>${ncDirty ? '<button class="btn" id="n-cancel">Undo changes</button>' : ''}</div>
         <p class="small muted">${cur.post?.cfg ? `The ${seasonLabel(cur.year)} field is already announced, so a new format starts in ${seasonLabel(cur.year + 1)}.` : `Applies to the ${seasonLabel(cur.year)} tournament and every season after.`} Each conference with ${aqMinOf(cur)} or more teams gives its regular-season champion an automatic bid; the committee proposes the rest in BCS order, and you pick the at-large teams and set the seeds.</p>
       </div>
+      <div class="card stack"><h2>Rivalries</h2>
+        <p class="small muted">Played every year. Between conferences they're booked before any other non-conference game, the host swapping each year; inside a conference too big to play everyone, they stay on the conference schedule. Used for every new schedule.</p>
+        <div class="rv-list">${rivalriesOf(cur).map(([a, b], i) => `<div class="row" style="justify-content:space-between;border-bottom:1px solid var(--line, #e3e7ee);padding:4px 0"><span>${esc(a)} – ${esc(b)} <span class="muted small">${cur.teams[a] && cur.teams[b] ? (cur.teams[a].conference === cur.teams[b].conference ? 'conference' : 'non-conference') : 'not both in the league'}</span></span><button class="btn sm ghost" data-rv="${i}" title="Remove">✕</button></div>`).join('') || '<p class="muted small">None.</p>'}</div>
+        <div class="row"><select id="rv-a" aria-label="First team">${teamOptions(null, { list: Object.keys(cur.teams).sort() })}</select><select id="rv-b" aria-label="Second team">${teamOptions(null, { list: Object.keys(cur.teams).sort() })}</select><button class="btn" id="rv-add">Add</button></div>
+        <button class="btn sm ghost" id="rv-reset" style="align-self:flex-start">Back to the default list</button>
+      </div>
       <div class="card stack"><h2>Backups</h2>
         <p class="small muted">The dynasty is saved in this browser. Download a backup to keep a copy or move it to another device.</p>
         <div class="row"><button class="btn" id="s-export">Download backup</button><label class="btn">Restore backup <input type="file" id="s-import" accept="application/json,.json" hidden></label></div>
@@ -1102,6 +1108,15 @@ export function renderSettings() {
         <button class="btn danger" id="s-reset">Start over with a new league</button>
       </div>
     </div>`;
+  $$('[data-rv]').forEach(b => (b.onclick = () => { const l = [...rivalriesOf(cur)]; l.splice(+b.dataset.rv, 1); cs.rivalries = l; changed({ progress: false }); }));
+  $('#rv-add').onclick = () => {
+    const a = $('#rv-a').value, b = $('#rv-b').value;
+    if (!a || !b || a === b) return toast('Pick two different teams.', true);
+    const l = rivalriesOf(cur);
+    if (l.some(([x, y]) => (x === a && y === b) || (x === b && y === a))) return toast('That rivalry is already on the list.', true);
+    cs.rivalries = [...l, [a, b]]; changed({ progress: false }); toast(`${a} – ${b} added. It's played every year from the next schedule on.`);
+  };
+  $('#rv-reset').onclick = () => { delete cs.rivalries; changed({ progress: false }); toast('Rivalries reset to the default list.'); };
   $('#s-poll').onchange = e => { cs.pollSize = +e.target.value; changed({ progress: false }); toast(`Polls from now on will be a Top ${cs.pollSize}.`); };
   $('#s-weeks').onchange = e => { cs.regWeeks = Math.max(8, Math.min(16, Math.round(Number(e.target.value) || DEFAULT_REG_WEEKS))); changed({ progress: false }); toast(`New schedules will run ${cs.regWeeks} weeks.`); };
   $('#s-cm').onchange = e => { cs.confMatches = Math.max(2, Math.min(12, Math.round(+e.target.value || DEFAULT_CONF_MATCHES))); changed({ progress: false }); };

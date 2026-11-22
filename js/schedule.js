@@ -15,10 +15,10 @@
 // When `prev` (last season) is given, conference opponents who met last year
 // swap home and away.
 
-import { isIndependent } from './standings.js?v=20261122131034';
-import { cityPoint, miles } from './geo.js?v=20261122131034';
-import { rng, shuffle, hashStr } from './util.js?v=20261122131034';
-import { spreadConfHomes } from './homeaway.js?v=20261122131034';
+import { isIndependent } from './standings.js?v=20261122132201';
+import { cityPoint, miles } from './geo.js?v=20261122132201';
+import { rng, shuffle, hashStr } from './util.js?v=20261122132201';
+import { spreadConfHomes } from './homeaway.js?v=20261122132201';
 
 export const DEFAULT_REG_WEEKS = 13;
 export const DEFAULT_TOURNEY_WEEKS = 0; // kept for older code paths
@@ -278,6 +278,9 @@ const levelCost = (x, y) => { const g = Math.abs(x - y); return g * 15 + Math.ma
 // average is above the league's (at most 12 down or 8 up). An opponent above
 // that target costs more than one below it.
 export const TOUGH = 1.2;
+// Football teams play anybody out of conference (the owner's call, Nov. 2026):
+// distance only breaks near-ties.
+export const DIST_WEIGHT = 0.12;
 const aimCost = (opp, target) => { const g = opp - target, a = Math.abs(g); return (g > 0 ? 45 : 12) * a + Math.max(0, a - 18) * 60; };
 function targetLevels(teams, lvl) {
   const names = Object.keys(teams), avg = names.reduce((x, t) => x + lvl(t), 0) / (names.length || 1);
@@ -313,7 +316,7 @@ function nearCross(pool, teams, met, r, dist) {
       if (rival(teams, a, b)) return;
       // Teams near each one's target level (`aimCost`: a tough conference's
       // teams schedule down), but few marquee games each.
-      const c = dist(a, b) * 0.5 + r() * 500 + (aimCost(lvl(b), aim[a]) + aimCost(lvl(a), aim[b])) / 2 + (big(a, b) ? MARQUEE * ((mq.n[a] || 0) + (mq.n[b] || 0)) : 0) + (met.has(key(a, b)) ? 4000 : 0);
+      const c = dist(a, b) * DIST_WEIGHT + r() * 500 + (aimCost(lvl(b), aim[a]) + aimCost(lvl(a), aim[b])) / 2 + (big(a, b) ? MARQUEE * ((mq.n[a] || 0) + (mq.n[b] || 0)) : 0) + (met.has(key(a, b)) ? 4000 : 0);
       if (c < bs) { bs = c; best = j; }
     });
     if (best >= 0) { const b = left.splice(best, 1)[0]; pairs.push([a, b]); if (big(a, b)) { mq.n[a] = (mq.n[a] || 0) + 1; mq.n[b] = (mq.n[b] || 0) + 1; } }
@@ -383,7 +386,7 @@ function drawSchedule(season, seed, prev) {
     const n = list.length, G = confTarget(n, st.confMatches ?? DEFAULT_CONF_MATCHES);
     if (!G) continue;
     const prefer = (a, b) => { const h = hosts.get(key(a, b)); return !h || h === 'both' ? 0 : h === a ? -1 : 1; };
-    const edges = confPairs(list, G, r, lastMet).map(([a, b]) => ({ a, b }));
+    const edges = confPairs(list, G, r, lastMet, rivalriesOf(season)).map(([a, b]) => ({ a, b }));
     const oriented = balanceHomes(edges, r, prefer);
     // Weeks: every team plays at most once a week.
     const wk = weekPlan(oriented, list, confWeeks.length < G ? Array.from({ length: G }, (_, i) => REG - G + 1 + i) : confWeeks, r);
@@ -405,6 +408,19 @@ function drawSchedule(season, seed, prev) {
     if (homeCount[a] < homeCount[b]) return [a, b];
     return r() < 0.5 ? [a, b] : [b, a];
   };
+  // Non-conference rivalries first, every year: the host swaps from last
+  // year's meeting, on a week both have open (early in the season if they can).
+  const lastHost = new Map();
+  for (const g of prev?.games || []) if (g.type === 'regular' && !g.confGame && !g.filler) lastHost.set(key(g.home, g.away), g.home);
+  for (const [a, b] of rivalriesOf(season)) {
+    if (!teams[a] || !teams[b] || a === b || rival(teams, a, b) || need[a] <= 0 || need[b] <= 0 || met.has(key(a, b))) continue;
+    const w = [2, 1, 3, ...Array.from({ length: REG }, (_, i) => i + 1)].find(x => x <= REG && !busy[a].has(x) && !busy[b].has(x));
+    if (!w) continue;
+    const last = lastHost.get(key(a, b));
+    const [h, aw] = last === a ? [b, a] : last === b ? [a, b] : r() < 0.5 ? [a, b] : [b, a];
+    add(w, h, aw, { rivalry: true });
+    need[a]--; need[b]--;
+  }
   for (let week = 1; week <= REG; week++) {
     const pool = names.filter(t => {
       if (need[t] <= 0 || busy[t].has(week)) return false;
@@ -429,7 +445,7 @@ function drawSchedule(season, seed, prev) {
           const w = Array.from({ length: REG }, (_, i) => i + 1).find(x => !busy[a].has(x) && !busy[b].has(x));
           if (!w) continue;
           const aim = targets.get(met) || targetLevels(teams, t => lvl(teams[t]));
-          const c = dist(a, b) + (aimCost(lvl(teams[b]), aim[a]) + aimCost(lvl(teams[a]), aim[b])) / 2 + (met.has(key(a, b)) ? 4000 : 0) + r() * 300;
+          const c = dist(a, b) * DIST_WEIGHT + (aimCost(lvl(teams[b]), aim[a]) + aimCost(lvl(teams[a]), aim[b])) / 2 + (met.has(key(a, b)) ? 4000 : 0) + r() * 300;
           if (c < bc) { bc = c; best = [b, w]; }
         }
         if (!best) break;
@@ -453,6 +469,22 @@ function drawSchedule(season, seed, prev) {
   games.sort((a, b) => a.week - b.week || a.order - b.order);
   return games;
 }
+
+// Rivalries played every year (the owner's ask, Nov. 2026; edited in
+// Settings → Schedule format, `settings.rivalries`). Between conferences
+// they're booked before any other non-conference game; inside a conference
+// too big to play everyone, they're kept in the conference schedule.
+export const DEFAULT_RIVALRIES = [
+  // Non-conference in the owner's alignment.
+  ['Iowa', 'Iowa State'], ['Oregon', 'Oregon State'], ['Washington', 'Washington State'], ['Utah', 'BYU'],
+  ['Notre Dame', 'USC'], ['Notre Dame', 'Stanford'], ['Penn State', 'Pittsburgh'], ['Colorado', 'Nebraska'],
+  // Conference rivalries kept every year.
+  ['Texas', 'Texas A&M'], ['Missouri', 'Kansas'], ['Houston', 'Rice'], ['Baylor', 'Texas Tech'],
+  ['Florida', 'Florida State'], ['Georgia', 'Georgia Tech'], ['Duke', 'North Carolina'], ['Florida State', 'Miami'], ['Maryland', 'Virginia'],
+  ['Michigan', 'Ohio State'], ['Michigan', 'Michigan State'], ['Indiana', 'Purdue'], ['Minnesota', 'Wisconsin'], ['Iowa', 'Minnesota'], ['Illinois', 'Northwestern'],
+  ['Arizona', 'Arizona State'], ['California', 'Stanford'], ['UCLA', 'USC'],
+];
+export const rivalriesOf = season => season.settings?.rivalries ?? DEFAULT_RIVALRIES;
 
 // The generic FCS opponents for a team's last-resort game, by region.
 export const FCS_OPPONENTS = ['FCS West', 'FCS Southwest', 'FCS Midwest', 'FCS Southeast', 'FCS Northeast'];
@@ -482,18 +514,35 @@ export function fillerGame(season, team, week, opp, r) {
 // otherwise a g-regular set of pairs (a circulant on a shuffled order: each
 // team plays the g nearest in that order), the draw that leaves out the
 // fewest pairs who also missed each other last year.
-export function confPairs(list, g, r, lastMet = new Set()) {
+export function confPairs(list, g, r, lastMet = new Set(), keep = []) {
   const n = list.length;
   if (g >= n - 1) { const out = []; for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) out.push([list[i], list[j]]); return out; }
+  // Rivals to keep sit side by side in the order (chains of rivals, a team
+  // with two rivals between them), so the nearest-neighbor pairs include them.
+  const set = new Set(list), want = keep.filter(([a, b]) => set.has(a) && set.has(b) && a !== b);
+  const adj = new Map();
+  for (const [a, b] of want) { (adj.has(a) ? adj : adj.set(a, [])).get(a).push(b); (adj.has(b) ? adj : adj.set(b, [])).get(b).push(a); }
+  const chainsFor = () => {
+    const seen = new Set(), chains = [];
+    for (const t of shuffle(list, r)) {
+      if (seen.has(t) || (adj.get(t) || []).length === 2) continue; // start at a chain's end
+      const ch = [t]; seen.add(t);
+      for (let cur = t; ;) { const nx = (adj.get(cur) || []).find(x => !seen.has(x)); if (!nx) break; ch.push(nx); seen.add(nx); cur = nx; }
+      chains.push(r() < 0.5 ? ch : ch.reverse());
+    }
+    for (const t of list) if (!seen.has(t)) chains.push([t]); // a cycle: left as singles
+    return shuffle(chains, r).flat();
+  };
   let best = null, bc = Infinity;
-  for (let tries = 0; tries < 60; tries++) {
-    const o = shuffle(list, r), pairs = [];
+  for (let tries = 0; tries < 300; tries++) {
+    const o = want.length ? chainsFor() : shuffle(list, r), pairs = [];
     for (let k = 1; k <= Math.floor(g / 2); k++) for (let i = 0; i < n; i++) pairs.push([o[i], o[(i + k) % n]]);
     if (g % 2) for (let i = 0; i < n / 2; i++) pairs.push([o[i], o[i + n / 2]]);
     const inSet = new Set(pairs.map(([a, b]) => key(a, b)));
     let missedTwice = 0;
     if (lastMet.size) for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const k = key(list[i], list[j]); if (!inSet.has(k) && !lastMet.has(k)) missedTwice++; }
-    const c = missedTwice * 10 + r();
+    const missing = want.filter(([a, b]) => !inSet.has(key(a, b))).length;
+    const c = missing * 1000 + missedTwice * 10 + r();
     if (c < bc) { bc = c; best = pairs; }
   }
   return best;

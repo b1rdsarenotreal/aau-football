@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { newLeague, currentSeason, simGames, startNextSeason, beginOffseason, migrateLeague, weekName, rebuildSchedule } from '../js/league.js';
 import { simulateGame, matchOdds, simulatedWinRate, ovr } from '../js/sim.js';
-import { confTarget, dateOf, generateSchedule, isFiller, FCS_OPPONENTS } from '../js/schedule.js';
+import { confTarget, dateOf, generateSchedule, isFiller, FCS_OPPONENTS, DEFAULT_RIVALRIES } from '../js/schedule.js';
 import { isFinal, rating, records, indexName } from '../js/standings.js';
 import { bcs, computerRanks, COMPUTERS } from '../js/bcs.js';
 import { postWeeks, autoBids, aqConferences, fieldSize, ncaaConfig, shownSeed, setAtLarge, selectionBoard } from '../js/postseason.js';
@@ -97,6 +97,23 @@ check('teams in tough conferences schedule down, weak conferences up', () => {
   const avg = c => gap[c].reduce((a, b) => a + b, 0) / gap[c].length;
   assert.ok(avg('Big Ten') < -4 && avg('Coastal Atlantic Conference') < -4, `${avg('Big Ten')} ${avg('Coastal Atlantic Conference')}`);
   assert.ok(avg('Western Athletic Conference') > 0, `${avg('Western Athletic Conference')}`);
+});
+
+check('rivalries every year: non-conference ones booked first, hosts swapping; conference ones kept', () => {
+  const L = newLeague({ year: 2033 }), s = currentSeason(L);
+  let prev = null, hosts = [];
+  for (let y = 0; y < 4; y++) {
+    const g = generateSchedule(s, 400 + y, prev);
+    const meet = new Map(g.map(x => [[x.home, x.away].sort().join('|'), x]));
+    for (const [a, b] of DEFAULT_RIVALRIES) assert.ok(meet.has([a, b].sort().join('|')), `${a}-${b} in year ${y}`);
+    const cy = meet.get('Iowa|Iowa State');
+    assert.ok(!cy.confGame && cy.rivalry); hosts.push(cy.home);
+    prev = { games: g };
+  }
+  assert.deepEqual(hosts.slice(1), hosts.slice(0, 3).map(h => (h === 'Iowa' ? 'Iowa State' : 'Iowa')), 'the host swaps every year');
+  s.settings.rivalries = [['Ohio State', 'Indiana']];
+  const g = generateSchedule(s, 5, null);
+  assert.ok(g.some(x => [x.home, x.away].sort().join('|') === 'Indiana|Ohio State'));
 });
 
 check('a team still short plays a generic FCS opponent, a home win, as the last resort', () => {

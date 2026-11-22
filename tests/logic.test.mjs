@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { newLeague, currentSeason, simGames, startNextSeason, beginOffseason, migrateLeague, weekName, rebuildSchedule } from '../js/league.js';
 import { simulateGame, matchOdds, simulatedWinRate, ovr } from '../js/sim.js';
-import { confTarget, dateOf, generateSchedule, isFiller, FCS_OPPONENTS, DEFAULT_RIVALRIES } from '../js/schedule.js';
+import { confTarget, dateOf, generateSchedule, isFiller, FCS_OPPONENTS, DEFAULT_RIVALRIES, MARQUEE_MAX } from '../js/schedule.js';
 import { isFinal, rating, records, indexName } from '../js/standings.js';
 import { bcs, computerRanks, COMPUTERS } from '../js/bcs.js';
 import { postWeeks, autoBids, aqConferences, fieldSize, ncaaConfig, shownSeed, setAtLarge, selectionBoard } from '../js/postseason.js';
@@ -114,6 +114,21 @@ check('rivalries every year: non-conference ones booked first, hosts swapping; c
   s.settings.rivalries = [['Ohio State', 'Indiana']];
   const g = generateSchedule(s, 5, null);
   assert.ok(g.some(x => [x.home, x.away].sort().join('|') === 'Indiana|Ohio State'));
+});
+
+check('top-third teams play at most two others out of conference, usually one', () => {
+  const L = newLeague({ year: 2033 }), s = currentSeason(L);
+  const names = Object.keys(s.teams).sort((a, b) => ovr(s.teams[b]) - ovr(s.teams[a]));
+  const top = new Set(names.slice(0, Math.ceil(names.length / 3)));
+  const dist = [0, 0, 0];
+  let prev = null;
+  for (let y = 0; y < 4; y++) {
+    const games = generateSchedule(s, 1100 + y, prev), n = {};
+    for (const x of games) if (x.type === 'regular' && !x.confGame && !x.filler && top.has(x.home) && top.has(x.away)) for (const t of [x.home, x.away]) n[t] = (n[t] || 0) + 1;
+    for (const t of top) { assert.ok((n[t] || 0) <= MARQUEE_MAX, `${t} ${n[t]}`); dist[n[t] || 0]++; }
+    prev = { games };
+  }
+  assert.ok(dist[1] > dist[0] + dist[2], dist.join('/'));
 });
 
 check('a team still short plays a generic FCS opponent, a home win, as the last resort', () => {

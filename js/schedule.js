@@ -15,10 +15,10 @@
 // When `prev` (last season) is given, conference opponents who met last year
 // swap home and away.
 
-import { isIndependent } from './standings.js?v=20261122132201';
-import { cityPoint, miles } from './geo.js?v=20261122132201';
-import { rng, shuffle, hashStr } from './util.js?v=20261122132201';
-import { spreadConfHomes } from './homeaway.js?v=20261122132201';
+import { isIndependent } from './standings.js?v=20261122132649';
+import { cityPoint, miles } from './geo.js?v=20261122132649';
+import { rng, shuffle, hashStr } from './util.js?v=20261122132649';
+import { spreadConfHomes } from './homeaway.js?v=20261122132649';
 
 export const DEFAULT_REG_WEEKS = 13;
 export const DEFAULT_TOURNEY_WEEKS = 0; // kept for older code paths
@@ -295,7 +295,12 @@ function targetLevels(teams, lvl) {
   return out;
 }
 const targets = new WeakMap();
-const MARQUEE = 100, marquee = new WeakMap();
+// Top-third teams (by rating) play each other out of conference at most
+// `MARQUEE_MAX` (2) times a season and usually once (the owner's rule,
+// Nov. 2026): a second such game costs `MARQUEE` per one either team has,
+// a third is never drawn. Rivalry games count.
+export const MARQUEE = 2500, MARQUEE_MAX = 2;
+const marquee = new WeakMap();
 function marqueeOf(met, teams, lvl) {
   if (!marquee.has(met)) {
     const names = Object.keys(teams), top = new Set([...names].sort((a, b) => lvl(b) - lvl(a)).slice(0, Math.ceil(names.length / 3)));
@@ -306,6 +311,7 @@ function marqueeOf(met, teams, lvl) {
 function nearCross(pool, teams, met, r, dist) {
   const lvl = t => lvlOf(teams[t]);
   const mq = marqueeOf(met, teams, lvl), big = (a, b) => mq.top.has(a) && mq.top.has(b);
+  const full = (a, b) => big(a, b) && Math.max(mq.n[a] || 0, mq.n[b] || 0) >= MARQUEE_MAX;
   if (!targets.has(met)) targets.set(met, targetLevels(teams, lvl));
   const aim = targets.get(met);
   const left = shuffle(pool, r), pairs = [];
@@ -313,7 +319,7 @@ function nearCross(pool, teams, met, r, dist) {
     const a = left.shift();
     let best = -1, bs = Infinity;
     left.forEach((b, j) => {
-      if (rival(teams, a, b)) return;
+      if (rival(teams, a, b) || full(a, b)) return;
       // Teams near each one's target level (`aimCost`: a tough conference's
       // teams schedule down), but few marquee games each.
       const c = dist(a, b) * DIST_WEIGHT + r() * 500 + (aimCost(lvl(b), aim[a]) + aimCost(lvl(a), aim[b])) / 2 + (big(a, b) ? MARQUEE * ((mq.n[a] || 0) + (mq.n[b] || 0)) : 0) + (met.has(key(a, b)) ? 4000 : 0);
@@ -410,6 +416,8 @@ function drawSchedule(season, seed, prev) {
   };
   // Non-conference rivalries first, every year: the host swaps from last
   // year's meeting, on a week both have open (early in the season if they can).
+  const mq = marqueeOf(met, teams, t => lvl(teams[t]));
+  const bigN = (a, b) => (mq.top.has(a) && mq.top.has(b) ? Math.max(mq.n[a] || 0, mq.n[b] || 0) : -1);
   const lastHost = new Map();
   for (const g of prev?.games || []) if (g.type === 'regular' && !g.confGame && !g.filler) lastHost.set(key(g.home, g.away), g.home);
   for (const [a, b] of rivalriesOf(season)) {
@@ -420,6 +428,7 @@ function drawSchedule(season, seed, prev) {
     const [h, aw] = last === a ? [b, a] : last === b ? [a, b] : r() < 0.5 ? [a, b] : [b, a];
     add(w, h, aw, { rivalry: true });
     need[a]--; need[b]--;
+    if (mq.top.has(a) && mq.top.has(b)) { mq.n[a] = (mq.n[a] || 0) + 1; mq.n[b] = (mq.n[b] || 0) + 1; }
   }
   for (let week = 1; week <= REG; week++) {
     const pool = names.filter(t => {
@@ -441,17 +450,18 @@ function drawSchedule(season, seed, prev) {
       while (need[a] > 0) {
         let best = null, bc = Infinity;
         for (const b of names) {
-          if (b === a || need[b] <= 0 || rival(teams, a, b)) continue;
+          if (b === a || need[b] <= 0 || rival(teams, a, b) || bigN(a, b) >= MARQUEE_MAX) continue;
           const w = Array.from({ length: REG }, (_, i) => i + 1).find(x => !busy[a].has(x) && !busy[b].has(x));
           if (!w) continue;
           const aim = targets.get(met) || targetLevels(teams, t => lvl(teams[t]));
-          const c = dist(a, b) * DIST_WEIGHT + (aimCost(lvl(teams[b]), aim[a]) + aimCost(lvl(teams[a]), aim[b])) / 2 + (met.has(key(a, b)) ? 4000 : 0) + r() * 300;
+          const c = dist(a, b) * DIST_WEIGHT + (aimCost(lvl(teams[b]), aim[a]) + aimCost(lvl(teams[a]), aim[b])) / 2 + (met.has(key(a, b)) ? 4000 : 0) + (bigN(a, b) >= 0 ? MARQUEE * ((mq.n[a] || 0) + (mq.n[b] || 0)) : 0) + r() * 300;
           if (c < bc) { bc = c; best = [b, w]; }
         }
         if (!best) break;
         const [b, w] = best, [h, aw] = orient(a, b);
         add(w, h, aw);
         need[a]--; need[b]--;
+        if (bigN(a, b) >= 0) { mq.n[a] = (mq.n[a] || 0) + 1; mq.n[b] = (mq.n[b] || 0) + 1; }
       }
     }
   }

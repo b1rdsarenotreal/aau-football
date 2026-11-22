@@ -44,13 +44,16 @@ unless the owner asks.
   `slack: 0`), or everyone once in a conference of 8 or fewer
   (`confTarget`). In a bigger conference the opponents are a regular graph
   drawn each year (`confPairs`), favoring pairs that missed each other last
-  year. Non-conference games mostly weeks 1–3 (`nearCross`, `MARQUEE`), a much
+  year. Non-conference games mostly weeks 1–3 (`nearCross`), a much
   stronger team hosting. Each team aims at a target level (`targetLevels`,
   the owner's rule, Nov. 2026): its own rating minus `TOUGH` (1.2) × how far
   its conference rivals' average is above the league's (at most 12 down or
   8 up), so a team in a tough conference schedules games it can win and one
   in a weak conference schedules up; an opponent above the target costs more
-  than one below (`aimCost`). Teams left short pair up on open weeks; as the
+  than one below (`aimCost`). Top-third teams play each other out of
+  conference at most `MARQUEE_MAX` (2) times a season, usually once (the
+  owner's rule, Nov. 2026; rivalry games count; a second costs `MARQUEE`).
+  Teams left short pair up on open weeks; as the
   last resort (the owner's rule) a team still short hosts a generic FCS
   opponent from its region (`FCS_OPPONENTS`: FCS West, Southwest, Midwest,
   Southeast, Northeast; `fcsName`), an automatic win (`fillerGame`,

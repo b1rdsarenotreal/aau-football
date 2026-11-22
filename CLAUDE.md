@@ -81,7 +81,10 @@ unless the owner asks.
   counting margin (Colley, Bradley-Terry, RPI, Elo, Keener, Billings): 25
   points for No. 1 to 1 for No. 25, best and worst dropped, out of 100.
   `computerRanks` is cached by the games. The polls' résumé uses the
-  computers (`computerIndex`), never the BCS, so nothing loops.
+  computers (`computerIndex`), never the BCS, so nothing loops. A ranked
+  team on a bye drops at most `BYE_DROP` (2) spots, one on any ballot
+  (`BYE_DROP_BALLOT`; `holdLosers` in `js/polls.js`, the owner's rule,
+  Nov. 2026).
   `rating(season)` gives the BCS in the RPI's shape (value in `rpi`, plus
   `rank`, `sosRank`, `poll`, `coaches`, `comp`, `computers`); use it and
   `indexName(season)`. Rankings → BCS standings and Coaches Poll.

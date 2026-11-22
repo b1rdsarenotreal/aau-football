@@ -16,9 +16,9 @@
 // settings, so they carry into later seasons), remove added voters, and
 // edit any published poll.
 
-import { rng, normal, hashStr, clamp } from './util.js?v=20261122133319';
-import { records, rpi, rating, indexName, usesNpi, isFinal, winnerOf, isTie } from './standings.js?v=20261122133319';
-import { computerIndex } from './bcs.js?v=20261122133319';
+import { rng, normal, hashStr, clamp } from './util.js?v=20261122140659';
+import { records, rpi, rating, indexName, usesNpi, isFinal, winnerOf, isTie } from './standings.js?v=20261122140659';
+import { computerIndex } from './bcs.js?v=20261122140659';
 
 export const DEFAULT_POLL_SIZE = 25;
 export const POLL_SIZES = [10, 15, 20, 25];
@@ -305,7 +305,11 @@ export function generatePoll(season, week, { final = false, postBonus = null, co
   // losses against that team) with a ranked team at most H2H_GAP (5) spots above
   // it goes above that team on every ballot.
   const h2h = headToHead(season, week, prevRank, final);
-  const weekW = {}, weekL = {};
+  const weekW = {}, weekL = {}, busy = new Set();
+  if (!final && week > 0) for (const g of season.games) if (g.week === week) { busy.add(g.home); busy.add(g.away); }
+  // Ranked teams on a bye (the owner's rule, Nov. 2026): a voter drops one at
+  // most BYE_DROP_BALLOT spot, the poll at most BYE_DROP.
+  const idle = !final && week > 0 ? Object.keys(prevRank).filter(t => !busy.has(t)) : [];
   if (!final && week > 0) for (const g of season.games) {
     if (g.week !== week || !isFinal(g) || isTie(g)) continue;
     const w = winnerOf(g), l = w === g.home ? g.away : g.home;
@@ -338,7 +342,7 @@ export function generatePoll(season, week, { final = false, postBonus = null, co
       return [t, sc];
     }).sort((a, b) => b[1] - a[1]).map(x => x[0]);
     // No voter moves a ranked team up after a losing week.
-    const ballot = holdLosers(applyHeadToHead(full, h2h), prevRank, weekW, weekL);
+    const ballot = holdLosers(applyHeadToHead(full, h2h), prevRank, weekW, weekL, idle, BYE_DROP_BALLOT);
     // Losing records last (they still fill the poll in a small sport).
     ballot.sort((a, b) => barred.has(a) - barred.has(b));
     ballot.splice(size);
@@ -347,7 +351,7 @@ export function generatePoll(season, week, { final = false, postBonus = null, co
   }
   // Ties in points go to the consensus score.
   const cons = teamScores(season, wk, { postBonus }).scores;
-  let order = holdLosers(Object.keys(pts).sort((a, b) => pts[b] - pts[a] || cons[b] - cons[a]), prevRank, weekW, weekL);
+  let order = holdLosers(Object.keys(pts).sort((a, b) => pts[b] - pts[a] || cons[b] - cons[a]), prevRank, weekW, weekL, idle, BYE_DROP);
   for (let i = 1; i < order.length; i++) if (pts[order[i]] > pts[order[i - 1]]) pts[order[i]] = pts[order[i - 1]];
   // The champion is the unanimous #1 in the final poll.
   if (final && season.post?.champion) {
@@ -366,6 +370,7 @@ export function generatePoll(season, week, { final = false, postBonus = null, co
 }
 
 const WEEK_WEIGHT = 0.07, H2H_GAP = 5;
+export const BYE_DROP = 2, BYE_DROP_BALLOT = 1;
 function headToHead(season, week, prevRank, final) {
   if (final || week <= 0) return [];
   const pair = {};
@@ -396,7 +401,8 @@ function applyHeadToHead(order, pairs) {
 // A team ranked last week that lost more games than it won this week can't
 // be placed above its old spot; it's moved back down to it.
 // A ranked team that won every game it played this week can't drop.
-function holdLosers(order, prevRank, weekW, weekL) {
+// A ranked team that didn't play drops at most `idleDrop` spots.
+function holdLosers(order, prevRank, weekW, weekL, idle = [], idleDrop = 99) {
   const list = [...order];
   const losers = Object.keys(prevRank).filter(t => (weekL[t] || 0) > (weekW[t] || 0)).sort((a, b) => prevRank[a] - prevRank[b]);
   const unbeaten = Object.keys(prevRank).filter(t => (weekW[t] || 0) > 0 && !weekL[t]).sort((a, b) => prevRank[a] - prevRank[b]);
@@ -409,6 +415,10 @@ function holdLosers(order, prevRank, weekW, weekL) {
     }
     for (const t of unbeaten) {
       const i = list.indexOf(t), ceil = prevRank[t] - 1;
+      if (i > ceil) { list.splice(i, 1); list.splice(ceil, 0, t); moved = true; }
+    }
+    for (const t of idle) {
+      const i = list.indexOf(t), ceil = prevRank[t] - 1 + idleDrop;
       if (i > ceil) { list.splice(i, 1); list.splice(ceil, 0, t); moved = true; }
     }
     if (!moved) break;

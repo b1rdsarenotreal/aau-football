@@ -32,9 +32,9 @@
 // and Toronto; name them on the Coaches page. Home fields are each school's
 // football stadium.
 
-import { DEFAULT_LOGOS } from './logo-import.js?v=20261122133319';
-import { AAU_SCHOOLS } from './aau-schools.js?v=20261122133319';
-import { CONF_LOGO_LINKS } from './conf-links.js?v=20261122133319';
+import { DEFAULT_LOGOS } from './logo-import.js?v=20261122140659';
+import { AAU_SCHOOLS } from './aau-schools.js?v=20261122140659';
+import { CONF_LOGO_LINKS } from './conf-links.js?v=20261122140659';
 
 export const START_YEAR = 2030;
 // When the AAU's founding members McGill and Toronto leave (after 2031-32).

@@ -9,6 +9,7 @@ import { postWeeks, autoBids, aqConferences, fieldSize, ncaaConfig, shownSeed, s
 import { homeAwayRuns, MAX_AWAY, MAX_HOME } from '../js/homeaway.js';
 import { seedTeams, COACHES, PROGRAM_INFO } from '../js/data.js';
 import { recordBook } from '../js/records.js';
+import { BYE_DROP } from '../js/polls.js';
 
 const t0 = Date.now();
 let n = 0;
@@ -174,6 +175,26 @@ check('conference home and away: no more than two straight weekends away or thre
     prev = { games };
   }
   assert.ok(over <= Math.ceil(teams * 0.02), `${over} of ${teams}`);
+});
+
+check('a ranked team on a bye drops two spots at most, in both polls', () => {
+  const L = newLeague({ year: 2033 }), s = currentSeason(L);
+  simGames(s, g => g.type === 'regular');
+  let byes = 0;
+  for (const key of ['polls', 'coachPolls']) {
+    const weeks = Object.keys(s[key]).filter(x => x !== 'final').map(Number).sort((a, b) => a - b);
+    for (let i = 1; i < weeks.length; i++) {
+      const w = weeks[i], pr = {}, cr = {};
+      s[key][weeks[i - 1]].ranks.forEach((x, j) => { pr[x.team] = j + 1; });
+      s[key][w].ranks.forEach((x, j) => { cr[x.team] = j + 1; });
+      for (const t of Object.keys(pr)) {
+        if (s.games.some(g => g.week === w && (g.home === t || g.away === t))) continue;
+        byes++;
+        assert.ok((cr[t] || s[key][w].ranks.length + 1) - pr[t] <= BYE_DROP, `${t} week ${w}: ${pr[t]} -> ${cr[t]}`);
+      }
+    }
+  }
+  assert.ok(byes > 20, `${byes} byes`);
 });
 
 check('the BCS standings: two polls and six computers, a third each', () => {

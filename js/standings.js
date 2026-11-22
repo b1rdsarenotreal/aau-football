@@ -1,8 +1,8 @@
 // Records, conference standings with tiebreakers, the RPI, the NPI and (in
 // js/bcs.js) the BCS standings.
 
-import { pct, hashStr } from './util.js?v=20261122133319';
-import { bcs } from './bcs.js?v=20261122133319';
+import { pct, hashStr } from './util.js?v=20261122140659';
+import { bcs } from './bcs.js?v=20261122140659';
 
 export const isFinal = g => g.final && g.homeR != null && g.awayR != null;
 // Lacrosse has no ties: a game tied after 60 minutes goes to sudden-victory

@@ -15,10 +15,10 @@
 // When `prev` (last season) is given, conference opponents who met last year
 // swap home and away.
 
-import { isIndependent } from './standings.js?v=20261122124702';
-import { cityPoint, miles } from './geo.js?v=20261122124702';
-import { rng, shuffle, hashStr } from './util.js?v=20261122124702';
-import { spreadConfHomes } from './homeaway.js?v=20261122124702';
+import { isIndependent } from './standings.js?v=20261122131034';
+import { cityPoint, miles } from './geo.js?v=20261122131034';
+import { rng, shuffle, hashStr } from './util.js?v=20261122131034';
+import { spreadConfHomes } from './homeaway.js?v=20261122131034';
 
 export const DEFAULT_REG_WEEKS = 13;
 export const DEFAULT_TOURNEY_WEEKS = 0; // kept for older code paths
@@ -270,6 +270,28 @@ function crossPairs(pool, teams, met, r) {
 // plays a few, not a whole non-conference schedule of them (the owner's
 // rule, Nov. 2026).
 const levelCost = (x, y) => { const g = Math.abs(x - y); return g * 15 + Math.max(0, g - 16) * 60; };
+// A team in a tough conference schedules down (the owner's rule, Nov. 2026):
+// with a conference schedule full of strong teams it needs non-conference
+// games it can win, not a ratings boost; a team in a weak conference
+// schedules up for the résumé its league can't give it. Its target opponent
+// level is its own rating minus TOUGH × how far its conference rivals'
+// average is above the league's (at most 12 down or 8 up). An opponent above
+// that target costs more than one below it.
+export const TOUGH = 1.2;
+const aimCost = (opp, target) => { const g = opp - target, a = Math.abs(g); return (g > 0 ? 45 : 12) * a + Math.max(0, a - 18) * 60; };
+function targetLevels(teams, lvl) {
+  const names = Object.keys(teams), avg = names.reduce((x, t) => x + lvl(t), 0) / (names.length || 1);
+  const byConf = {};
+  for (const t of names) if (!isIndependent(teams[t].conference)) (byConf[teams[t].conference] ||= []).push(t);
+  const out = {};
+  for (const t of names) {
+    const rivals = (byConf[teams[t].conference] || []).filter(x => x !== t);
+    const confAvg = rivals.length ? rivals.reduce((x, o) => x + lvl(o), 0) / rivals.length : avg;
+    out[t] = lvl(t) - Math.max(-8, Math.min(12, TOUGH * (confAvg - avg)));
+  }
+  return out;
+}
+const targets = new WeakMap();
 const MARQUEE = 100, marquee = new WeakMap();
 function marqueeOf(met, teams, lvl) {
   if (!marquee.has(met)) {
@@ -279,16 +301,19 @@ function marqueeOf(met, teams, lvl) {
   return marquee.get(met);
 }
 function nearCross(pool, teams, met, r, dist) {
-  const lvl = t => (teams[t].off ?? 65) * 0.4 + (teams[t].pit ?? 65) * 0.3 + (teams[t].def ?? 65) * 0.3;
+  const lvl = t => lvlOf(teams[t]);
   const mq = marqueeOf(met, teams, lvl), big = (a, b) => mq.top.has(a) && mq.top.has(b);
+  if (!targets.has(met)) targets.set(met, targetLevels(teams, lvl));
+  const aim = targets.get(met);
   const left = shuffle(pool, r), pairs = [];
   while (left.length > 1) {
     const a = left.shift();
     let best = -1, bs = Infinity;
     left.forEach((b, j) => {
       if (rival(teams, a, b)) return;
-      // Teams of a similar level, too (`levelCost`), but few marquee games each.
-      const c = dist(a, b) + r() * 700 + levelCost(lvl(a), lvl(b)) + (big(a, b) ? MARQUEE * ((mq.n[a] || 0) + (mq.n[b] || 0)) : 0) + (met.has(key(a, b)) ? 4000 : 0);
+      // Teams near each one's target level (`aimCost`: a tough conference's
+      // teams schedule down), but few marquee games each.
+      const c = dist(a, b) * 0.5 + r() * 500 + (aimCost(lvl(b), aim[a]) + aimCost(lvl(a), aim[b])) / 2 + (big(a, b) ? MARQUEE * ((mq.n[a] || 0) + (mq.n[b] || 0)) : 0) + (met.has(key(a, b)) ? 4000 : 0);
       if (c < bs) { bs = c; best = j; }
     });
     if (best >= 0) { const b = left.splice(best, 1)[0]; pairs.push([a, b]); if (big(a, b)) { mq.n[a] = (mq.n[a] || 0) + 1; mq.n[b] = (mq.n[b] || 0) + 1; } }
@@ -304,7 +329,9 @@ export function eventSizes(n, events = Math.floor(n / 4)) {
 }
 
 
-const lvl = t => (t.off ?? 65) * 0.4 + (t.pit ?? 65) * 0.3 + (t.def ?? 65) * 0.3;
+// A team's level for scheduling: its OVR (football's weights).
+const lvlOf = t => (t.off ?? 65) * 0.45 + (t.pit ?? 65) * 0.1 + (t.def ?? 65) * 0.45;
+const lvl = lvlOf;
 
 // The season's schedule. Once it's drawn, conference hosts (and, where a
 // week allows, the order of conference weeks) are set so no team plays more
@@ -401,7 +428,8 @@ function drawSchedule(season, seed, prev) {
           if (b === a || need[b] <= 0 || rival(teams, a, b)) continue;
           const w = Array.from({ length: REG }, (_, i) => i + 1).find(x => !busy[a].has(x) && !busy[b].has(x));
           if (!w) continue;
-          const c = dist(a, b) + levelCost(lvl(teams[a]), lvl(teams[b])) + (met.has(key(a, b)) ? 4000 : 0) + r() * 300;
+          const aim = targets.get(met) || targetLevels(teams, t => lvl(teams[t]));
+          const c = dist(a, b) + (aimCost(lvl(teams[b]), aim[a]) + aimCost(lvl(teams[a]), aim[b])) / 2 + (met.has(key(a, b)) ? 4000 : 0) + r() * 300;
           if (c < bc) { bc = c; best = [b, w]; }
         }
         if (!best) break;
@@ -411,8 +439,43 @@ function drawSchedule(season, seed, prev) {
       }
     }
   }
+  // Last resort (the owner's rule, Nov. 2026): a team still short plays a
+  // generic FCS opponent from its part of the country at home, as in the
+  // NCAA Football video games, an automatic win on an open date.
+  for (const a of names) {
+    while (need[a] > 0) {
+      const w = [1, 2, 3, ...Array.from({ length: REG - 3 }, (_, i) => i + 4)].find(x => x <= REG && !busy[a].has(x));
+      if (!w) break;
+      games.push(fillerGame(season, a, w, fcsName(pts[a]), r));
+      busy[a].add(w); homeCount[a]++; need[a]--;
+    }
+  }
   games.sort((a, b) => a.week - b.week || a.order - b.order);
   return games;
+}
+
+// The generic FCS opponents for a team's last-resort game, by region.
+export const FCS_OPPONENTS = ['FCS West', 'FCS Southwest', 'FCS Midwest', 'FCS Southeast', 'FCS Northeast'];
+export const isFiller = name => FCS_OPPONENTS.includes(name);
+export function fcsName(pt) {
+  if (!pt) return 'FCS Midwest';
+  const [lat, lon] = Array.isArray(pt) ? pt : [pt.lat, pt.lon];
+  if (lon < -104) return 'FCS West';
+  if (lon < -94 && lat < 37.5) return 'FCS Southwest';
+  if (lat < 36.8 && lon >= -94) return 'FCS Southeast';
+  if (lon < -84) return 'FCS Midwest';
+  return 'FCS Northeast';
+}
+// A last-resort game against a generic FCS team: at home, already final, a
+// win (the score is made up, a few points a quarter for the visitor).
+export function fillerGame(season, team, week, opp, r) {
+  const homeLine = Array.from({ length: 4 }, () => [7, 14, 10, 14, 7, 21, 3, 17][Math.floor(r() * 8)]);
+  const awayLine = Array.from({ length: 4 }, () => [0, 0, 0, 3, 7, 0, 0, 3][Math.floor(r() * 8)]);
+  const R = l => l.reduce((x, y) => x + y, 0);
+  return blankGame(season, {
+    week, day: 'Sat', order: DAY_ORDER.Sat, home: team, away: opp, filler: true, final: true, source: 'auto',
+    homeLine, awayLine, homeR: R(homeLine), awayR: R(awayLine), homeH: 380 + Math.round(r() * 180), awayH: 150 + Math.round(r() * 90), homeE: Math.round(r() * 1.4), awayE: 1 + Math.round(r() * 2),
+  });
 }
 
 // A conference's pairings for the season: everyone once when `g` is n − 1,

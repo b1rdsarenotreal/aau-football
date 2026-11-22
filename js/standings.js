@@ -1,8 +1,8 @@
 // Records, conference standings with tiebreakers, the RPI, the NPI and (in
 // js/bcs.js) the BCS standings.
 
-import { pct, hashStr } from './util.js?v=20261122124702';
-import { bcs } from './bcs.js?v=20261122124702';
+import { pct, hashStr } from './util.js?v=20261122131034';
+import { bcs } from './bcs.js?v=20261122131034';
 
 export const isFinal = g => g.final && g.homeR != null && g.awayR != null;
 // Lacrosse has no ties: a game tied after 60 minutes goes to sudden-victory
@@ -55,7 +55,8 @@ export function records(season, filter = null) {
 // Rating Percentage Index: 25% winning pct, 50% opponents' winning pct
 // (excluding games against the team), 25% opponents' opponents' pct.
 export function rpi(season, filter = null) {
-  const games = season.games.filter(g => isFinal(g) && (!filter || filter(g)));
+  // Games against a generic FCS opponent (a last-resort filler) don't count.
+  const games = season.games.filter(g => isFinal(g) && season.teams[g.home] && season.teams[g.away] && (!filter || filter(g)));
   const teams = Object.keys(season.teams);
   const opps = {}, wl = {}, vs = {};
   for (const t of teams) { opps[t] = []; wl[t] = { w: 0, n: 0 }; vs[t] = {}; }

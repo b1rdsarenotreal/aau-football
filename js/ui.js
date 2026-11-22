@@ -1,16 +1,16 @@
 // Shared UI state and pieces used by every page: the league, saving,
 // team labels and logos, game cards, and the game editor.
 
-import { saveLeague } from './store.js?v=20261122124702';
-import { logoFor } from './logos.js?v=20261122124702';
-import { LOGO_ALIASES } from './data.js?v=20261122124702';
-import { ovr, winProbability, matchOdds, QUARTERS, OT, OT_PERIODS } from './sim.js?v=20261122124702';
-import { records, isFinal, winnerOf, resultFor, isTie, sameConf } from './standings.js?v=20261122124702';
-import { latestPoll, pollRankMap } from './polls.js?v=20261122124702';
-import { afterChange, applyResult, clearResult, simResult, deleteGame, weekName, estimateHE } from './league.js?v=20261122124702';
-import { regWeeksOf, shownSeed, regionalSeed, mcwsVenue, gameVenue } from './postseason.js?v=20261122124702';
-import { DAY_ORDER, dateOf } from './schedule.js?v=20261122124702';
-import { esc } from './util.js?v=20261122124702';
+import { saveLeague } from './store.js?v=20261122131034';
+import { logoFor } from './logos.js?v=20261122131034';
+import { LOGO_ALIASES } from './data.js?v=20261122131034';
+import { ovr, winProbability, matchOdds, QUARTERS, OT, OT_PERIODS } from './sim.js?v=20261122131034';
+import { records, isFinal, winnerOf, resultFor, isTie, sameConf } from './standings.js?v=20261122131034';
+import { latestPoll, pollRankMap } from './polls.js?v=20261122131034';
+import { afterChange, applyResult, clearResult, simResult, deleteGame, weekName, estimateHE } from './league.js?v=20261122131034';
+import { regWeeksOf, shownSeed, regionalSeed, mcwsVenue, gameVenue } from './postseason.js?v=20261122131034';
+import { DAY_ORDER, dateOf } from './schedule.js?v=20261122131034';
+import { esc } from './util.js?v=20261122131034';
 
 // Logo files in this app (img/conf/) carry this release's version, like the
 // scripts do, so a redrawn logo shows right away instead of a cached copy.
@@ -84,9 +84,12 @@ export const cache = {
 
 // ---------- teams and logos ----------
 
+// The generic FCS opponents of last-resort games (js/schedule.js).
+const GENERIC = name => ({ school: name, abbr: 'FCS', mascot: '', color: '#5f6b7a', altColor: '#ffffff', conference: 'FCS', generic: true, off: 45, pit: 50, def: 45 });
 export function teamInfo(name) {
   const s = S();
   if (s.teams[name]) return s.teams[name];
+  if (/^FCS /.test(name || '')) return GENERIC(name);
   const ys = Object.keys(ctx.league.seasons).map(Number).sort((a, b) => b - a);
   for (const y of ys) if (ctx.league.seasons[y].teams[name]) return ctx.league.seasons[y].teams[name];
   return null;
@@ -124,7 +127,7 @@ export function team(name, { rank = true, record = false, seed = null, link = tr
   if (record && S().teams[name]) { const x = cache.recs()[name]; rec = ` <span class="muted small">${x.w}-${x.l}</span>`; }
   // abbrAlt: also carry the abbreviation, shown instead when the card is narrow.
   const text = abbrAlt && t?.abbr ? `<span class="tn-full">${esc(name)}</span><span class="tn-abbr">${esc(t.abbr)}</span>` : esc(name);
-  const label = t && link ? `<a class="team-link" href="${teamHref(name)}" title="${esc(name)}">${text}</a>` : text;
+  const label = t && !t.generic && link ? `<a class="team-link" href="${teamHref(name)}" title="${esc(name)}">${text}</a>` : text;
   return `<span class="team">${logoImg(t, size)}${r}${label}${rec}</span>`;
 }
 

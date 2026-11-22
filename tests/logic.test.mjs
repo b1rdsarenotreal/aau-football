@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { newLeague, currentSeason, simGames, startNextSeason, beginOffseason, migrateLeague, weekName, rebuildSchedule } from '../js/league.js';
 import { simulateGame, matchOdds, simulatedWinRate, ovr } from '../js/sim.js';
-import { confTarget, dateOf, generateSchedule } from '../js/schedule.js';
+import { confTarget, dateOf, generateSchedule, isFiller, FCS_OPPONENTS } from '../js/schedule.js';
 import { isFinal, rating, records, indexName } from '../js/standings.js';
 import { bcs, computerRanks, COMPUTERS } from '../js/bcs.js';
 import { postWeeks, autoBids, aqConferences, fieldSize, ncaaConfig, shownSeed, setAtLarge, selectionBoard } from '../js/postseason.js';
@@ -86,6 +86,36 @@ check('bigger conferences draw opponents that missed each other last year', () =
   let missedTwice = 0;
   for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) { const k = [list[i], list[j]].sort().join('|'); if (!y1.has(k) && !y2.has(k)) missedTwice++; }
   assert.ok(missedTwice <= 8, `${missedTwice} pairs missed both years`);
+});
+
+check('teams in tough conferences schedule down, weak conferences up', () => {
+  const L = newLeague({ year: 2033 }), s = currentSeason(L), gap = {};
+  for (let y = 0; y < 4; y++) for (const x of generateSchedule(s, 300 + y, null)) {
+    if (x.confGame || x.filler) continue;
+    for (const [t, o] of [[x.home, x.away], [x.away, x.home]]) (gap[s.teams[t].conference] ||= []).push(ovr(s.teams[o]) - ovr(s.teams[t]));
+  }
+  const avg = c => gap[c].reduce((a, b) => a + b, 0) / gap[c].length;
+  assert.ok(avg('Big Ten') < -4 && avg('Coastal Atlantic Conference') < -4, `${avg('Big Ten')} ${avg('Coastal Atlantic Conference')}`);
+  assert.ok(avg('Western Athletic Conference') > 0, `${avg('Western Athletic Conference')}`);
+});
+
+check('a team still short plays a generic FCS opponent, a home win, as the last resort', () => {
+  const L = newLeague({ year: 2033 }), s = currentSeason(L);
+  s.settings.maxMatches = 12; rebuildSchedule(s, null);
+  const f = reg(s).filter(x => x.filler);
+  assert.ok(f.length > 0, 'twelve games leaves someone short');
+  for (const x of f) {
+    assert.ok(isFiller(x.away) && FCS_OPPONENTS.includes(x.away) && s.teams[x.home] && isFinal(x) && x.homeR > x.awayR, JSON.stringify(x));
+    assert.ok(!reg(s).some(y => y !== x && y.week === x.week && (y.home === x.home || y.away === x.home)), 'on an open date');
+  }
+  assert.ok(f.length < 12, `${f.length} fillers: only for the few left over`);
+  const all = count(reg(s));
+  for (const t of Object.keys(s.teams)) assert.equal(all[t], 12, t);
+  rebuildSchedule(s, null); // a filler isn't a played game
+  simGames(s, () => true, { autoLock: true });
+  assert.equal(s.phase, 'complete');
+  const recs = records(s);
+  for (const x of reg(s).filter(y => y.filler)) assert.ok(recs[x.home].w >= 1);
 });
 
 check('conference home and away: no more than two straight weekends away or three at home', () => {

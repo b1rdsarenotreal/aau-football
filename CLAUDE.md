@@ -44,9 +44,20 @@ unless the owner asks.
   `slack: 0`), or everyone once in a conference of 8 or fewer
   (`confTarget`). In a bigger conference the opponents are a regular graph
   drawn each year (`confPairs`), favoring pairs that missed each other last
-  year. Non-conference games mostly weeks 1–3, nearby teams of a similar
-  level (`nearCross`, `MARQUEE`), a much stronger team hosting; teams left
-  short pair up on open weeks. A one-team conference (UC Davis in the UCAA,
+  year. Non-conference games mostly weeks 1–3 (`nearCross`, `MARQUEE`), a much
+  stronger team hosting. Each team aims at a target level (`targetLevels`,
+  the owner's rule, Nov. 2026): its own rating minus `TOUGH` (1.2) × how far
+  its conference rivals' average is above the league's (at most 12 down or
+  8 up), so a team in a tough conference schedules games it can win and one
+  in a weak conference schedules up; an opponent above the target costs more
+  than one below (`aimCost`). Teams left short pair up on open weeks; as the
+  last resort (the owner's rule) a team still short hosts a generic FCS
+  opponent from its region (`FCS_OPPONENTS`: FCS West, Southwest, Midwest,
+  Southeast, Northeast; `fcsName`), an automatic win (`fillerGame`,
+  `g.filler`, created final). Filler opponents aren't teams: `teamInfo`
+  gives them a plain badge, they're left out of the RPI, NPI and BCS, a
+  filler isn't a "played" game (rebuilding the schedule still works), and
+  `simResult` re-rolls one as another easy win. A one-team conference (UC Davis in the UCAA,
   Memphis in the Greater South) plays only non-conference games.
 - Conference home and away (`js/homeaway.js`, the owner's rule, Nov. 2026):
   no team plays more than two conference weekends in a row away (`MAX_AWAY`)

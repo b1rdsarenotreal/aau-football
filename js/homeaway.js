@@ -17,7 +17,7 @@
 // Last year's hosts (`lastHost(a, b)`): a pair that meets once a year swaps
 // hosts; that gives way only when the rule above needs it.
 
-import { shuffle } from './util.js?v=20261122124702';
+import { shuffle } from './util.js?v=20261122131034';
 
 export const MAX_AWAY = 2;
 export const MAX_HOME = 3;

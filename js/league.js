@@ -1,15 +1,15 @@
 // League (dynasty) lifecycle: creating the league, saving results,
 // simulating, adding teams and conferences, and rolling into new seasons.
 
-import { DEFAULT_LOGOS, AAU_LOGO_SET } from './logo-import.js?v=20261122124702';
-import { START_YEAR, CONFERENCES, CONF_LOGO_LINKS, COACHES, SIDES, sideOf, conferencesFor, seedTeams, makeTeam, fillSite } from './data.js?v=20261122124702';
-import { generateSchedule, blankGame, DAY_ORDER, DEFAULT_REG_WEEKS, DEFAULT_TOURNEY_WEEKS, DEFAULT_CONF_MATCHES, DEFAULT_MAX_MATCHES, PER_WEEK, confWeeksFor, confWeeksMax, confRounds, confSeriesCounts, confTarget } from './schedule.js?v=20261122124702';
-import { simulateGame, estimateHitsErrors } from './sim.js?v=20261122124702';
-import { generatePoll, releaseDuePolls } from './polls.js?v=20261122124702';
-import { replayRatings, ensureBase } from './ratings.js?v=20261122124702';
-import { progress, lockField, postWeeks, allEvents, regWeeksOf, fieldSize, DEFAULT_NCAA, OLD_DEFAULT_NCAA, pickConfHosts, postseasonFinish, citySiteNames, wsTeams, aqMinOf } from './postseason.js?v=20261122124702';
-import { isFinal, records, INDEPENDENT } from './standings.js?v=20261122124702';
-import { rng, normal, clamp, hashStr } from './util.js?v=20261122124702';
+import { DEFAULT_LOGOS, AAU_LOGO_SET } from './logo-import.js?v=20261122131034';
+import { START_YEAR, CONFERENCES, CONF_LOGO_LINKS, COACHES, SIDES, sideOf, conferencesFor, seedTeams, makeTeam, fillSite } from './data.js?v=20261122131034';
+import { generateSchedule, fillerGame, blankGame, DAY_ORDER, DEFAULT_REG_WEEKS, DEFAULT_TOURNEY_WEEKS, DEFAULT_CONF_MATCHES, DEFAULT_MAX_MATCHES, PER_WEEK, confWeeksFor, confWeeksMax, confRounds, confSeriesCounts, confTarget } from './schedule.js?v=20261122131034';
+import { simulateGame, estimateHitsErrors } from './sim.js?v=20261122131034';
+import { generatePoll, releaseDuePolls } from './polls.js?v=20261122131034';
+import { replayRatings, ensureBase } from './ratings.js?v=20261122131034';
+import { progress, lockField, postWeeks, allEvents, regWeeksOf, fieldSize, DEFAULT_NCAA, OLD_DEFAULT_NCAA, pickConfHosts, postseasonFinish, citySiteNames, wsTeams, aqMinOf } from './postseason.js?v=20261122131034';
+import { isFinal, records, INDEPENDENT } from './standings.js?v=20261122131034';
+import { rng, normal, clamp, hashStr } from './util.js?v=20261122131034';
 
 export const SCHEMA_VERSION = 4;
 
@@ -142,6 +142,12 @@ export function backfillHitsErrors(season) {
 
 export function simResult(season, g, seed) {
   const s = season.settings;
+  // A last-resort game against a generic FCS team stays an easy win.
+  if (g.filler || !season.teams[g.away]) {
+    const f = fillerGame(season, g.home, g.week, g.away, rng(seed ?? hashStr(`${season.year}|${g.id}`)));
+    season.nextId--; // fillerGame took an id it doesn't keep
+    return { homeLine: f.homeLine, awayLine: f.awayLine, home: { R: f.homeR, H: f.homeH, E: f.homeE }, away: { R: f.awayR, H: f.awayH, E: f.awayE }, innings: 4, runRule: false, pk: null };
+  }
   return simulateGame(season.teams[g.home], season.teams[g.away], g, { seed, volatility: s.volatility, otMinutes: s.otMinutes });
 }
 
@@ -275,7 +281,7 @@ export const ALIGNMENT = 'aau-football-1';
 const DROPPED = []; // schools to take out when the alignment changes
 export function canApplyAlignment(league) {
   const s = league.seasons?.[league.currentYear];
-  return !!s && !league.draft && !s.games.some(g => g.type === 'regular' && isFinal(g));
+  return !!s && !league.draft && !s.games.some(g => g.type === 'regular' && isFinal(g) && !g.filler);
 }
 export function applyAlignment(league) {
   if (!canApplyAlignment(league)) throw new Error('Games have already been played this season. Move teams in the offseason instead.');
@@ -303,7 +309,7 @@ export function applyAlignment(league) {
 
 // Rebuild the regular-season schedule (only before any regular-season game is played).
 export function rebuildSchedule(season, prev = null) {
-  if (season.games.some(g => g.type === 'regular' && isFinal(g))) throw new Error('Games have already been played this season.');
+  if (season.games.some(g => g.type === 'regular' && isFinal(g) && !g.filler)) throw new Error('Games have already been played this season.');
   season.games = season.games.filter(g => g.type !== 'regular');
   season.games.push(...generateSchedule(season, hashStr(`${season.year}-${Date.now()}`), prev));
   season.polls = {};

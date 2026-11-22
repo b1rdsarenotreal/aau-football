@@ -1,21 +1,21 @@
 // League pages: teams, team profiles, conferences, history, settings.
 
-import { readAauLogos, applyAauLogos, DEFAULT_LOGOS } from './logo-import.js?v=20261122124702';
-import { AAU_SCHOOLS, AAU_CONFERENCES, AAU_PROGRAMS } from './aau-schools.js?v=20261122124702';
-import { realignmentFor, applyRealignment, skipRealignment, JOIN_RATING, onRealignmentLoaded } from './realign.js?v=20261122124702';
-import { ctx, S, app, modal, $, $$, esc, toast, changed, persist, flushSave, cache, team, teamInfo, logoImg, teamOptions, teamHref, confLogo, confHref, confInfo, confColor, imageFileToDataUrl, readableOn, openGame, resultText, periodNote, gameDateOf, seasonLabel, seasonSpan } from './ui.js?v=20261122124702';
-import { isFinal, winnerOf, resultFor, records, rpi, rating, indexName, usesNpi, confStandings, regSeasonChamp, regSeasonChamps, isIndependent } from './standings.js?v=20261122124702';
-import { ovr } from './sim.js?v=20261122124702';
-import { latestPoll, pollRankMap, pollSizeOf, POLL_SIZES, DEFAULT_POLL_SIZE } from './polls.js?v=20261122124702';
-import { addTeam, removeTeam, renameTeam, addConference, renameConference, deleteConference, rebuildSchedule, startNextSeason, weekName, newLeague, beginOffseason, draftRemoveTeam, draftRestoreTeam, draftWarnings, coachName, coachSchool, hireCoach, newCoach, availableCoaches, backfillHitsErrors, placeRemaining, clearPoints, pointsLeft, migrateLeague, applyAlignment, canApplyAlignment, syncCoachBonus, devTotal, coachResumes, coachPrestige, prestigeLabel, coachBonus, programPrestiges, programLabel, fitLabel, defaultSettings } from './league.js?v=20261122124702';
-import { hotSeat, HEAT } from './hotseat.js?v=20261122124702';
-import { setRating } from './ratings.js?v=20261122124702';
-import { confFormatName, aqConferences, aqMinOf, postseasonFinish, postseasonDetail, postseasonRecord, wsTeams, postWeeks, regWeeksOf, ncaaConfig, ncaaProblems, fieldSize, hasSupers, formatSummary, proposeField, DEFAULT_NCAA, mcwsVenue, allEvents, gameVenue } from './postseason.js?v=20261122124702';
-import { DEFAULT_TOURNEY_WEEKS, DEFAULT_REG_WEEKS, DEFAULT_CONF_MATCHES, DEFAULT_MAX_MATCHES, confTarget } from './schedule.js?v=20261122124702';
-import { exportLeague, clearLeague } from './store.js?v=20261122124702';
-import { conferencesFor, sideOf } from './data.js?v=20261122124702';
-import { clamp, fmtPct } from './util.js?v=20261122124702';
-import { recordBook, teamPollHistory, headToHead } from './records.js?v=20261122124702';
+import { readAauLogos, applyAauLogos, DEFAULT_LOGOS } from './logo-import.js?v=20261122131034';
+import { AAU_SCHOOLS, AAU_CONFERENCES, AAU_PROGRAMS } from './aau-schools.js?v=20261122131034';
+import { realignmentFor, applyRealignment, skipRealignment, JOIN_RATING, onRealignmentLoaded } from './realign.js?v=20261122131034';
+import { ctx, S, app, modal, $, $$, esc, toast, changed, persist, flushSave, cache, team, teamInfo, logoImg, teamOptions, teamHref, confLogo, confHref, confInfo, confColor, imageFileToDataUrl, readableOn, openGame, resultText, periodNote, gameDateOf, seasonLabel, seasonSpan } from './ui.js?v=20261122131034';
+import { isFinal, winnerOf, resultFor, records, rpi, rating, indexName, usesNpi, confStandings, regSeasonChamp, regSeasonChamps, isIndependent } from './standings.js?v=20261122131034';
+import { ovr } from './sim.js?v=20261122131034';
+import { latestPoll, pollRankMap, pollSizeOf, POLL_SIZES, DEFAULT_POLL_SIZE } from './polls.js?v=20261122131034';
+import { addTeam, removeTeam, renameTeam, addConference, renameConference, deleteConference, rebuildSchedule, startNextSeason, weekName, newLeague, beginOffseason, draftRemoveTeam, draftRestoreTeam, draftWarnings, coachName, coachSchool, hireCoach, newCoach, availableCoaches, backfillHitsErrors, placeRemaining, clearPoints, pointsLeft, migrateLeague, applyAlignment, canApplyAlignment, syncCoachBonus, devTotal, coachResumes, coachPrestige, prestigeLabel, coachBonus, programPrestiges, programLabel, fitLabel, defaultSettings } from './league.js?v=20261122131034';
+import { hotSeat, HEAT } from './hotseat.js?v=20261122131034';
+import { setRating } from './ratings.js?v=20261122131034';
+import { confFormatName, aqConferences, aqMinOf, postseasonFinish, postseasonDetail, postseasonRecord, wsTeams, postWeeks, regWeeksOf, ncaaConfig, ncaaProblems, fieldSize, hasSupers, formatSummary, proposeField, DEFAULT_NCAA, mcwsVenue, allEvents, gameVenue } from './postseason.js?v=20261122131034';
+import { DEFAULT_TOURNEY_WEEKS, DEFAULT_REG_WEEKS, DEFAULT_CONF_MATCHES, DEFAULT_MAX_MATCHES, confTarget } from './schedule.js?v=20261122131034';
+import { exportLeague, clearLeague } from './store.js?v=20261122131034';
+import { conferencesFor, sideOf } from './data.js?v=20261122131034';
+import { clamp, fmtPct } from './util.js?v=20261122131034';
+import { recordBook, teamPollHistory, headToHead } from './records.js?v=20261122131034';
 
 const ui = { confFilter: '', ncaaDraft: null, teamSort: { k: 'ovr', dir: -1 }, coachSort: { k: 'now', dir: -1 }, teamTab: 'season', h2hSort: { k: 'g', dir: -1 }, h2hFilter: 'all', memberSort: { k: 'titles', dir: -1 } };
 
@@ -128,7 +128,7 @@ export function renderTeams() {
   $$('[data-conf]').forEach(sel => (sel.onchange = () => { s.teams[sel.dataset.conf].conference = sel.value; changed({ progress: false }); }));
   bindCoachSelects(s.teams, 'data-coach');
   $('#t-add').onclick = () => teamForm(s.teams, {
-    note: !s.games.some(g => g.type === 'regular' && isFinal(g)) ? 'rebuild' : 'played',
+    note: !s.games.some(g => g.type === 'regular' && isFinal(g) && !g.filler) ? 'rebuild' : 'played',
     after: f => { if (f.rebuild) rebuildSchedule(s, ctx.league.seasons[s.year - 1] || null); },
   });
 }
@@ -1047,7 +1047,7 @@ export function renderSettings() {
   const probs = ncaaProblems(nc, Object.keys(cur.teams).length);
   const autoCount = aqConferences(cur).length;
   if (autoCount > fieldSize(nc)) probs.push(`There are ${autoCount} conference champions with automatic bids, more than the ${fieldSize(nc)}-team field.`);
-  const canRebuild = !s.games.some(g => g.type === 'regular' && isFinal(g));
+  const canRebuild = !s.games.some(g => g.type === 'regular' && isFinal(g) && !g.filler);
   const missingHE = s.games.filter(g => g.final && g.source === 'manual' && s.teams[g.home] && s.teams[g.away] && !g.homeH && !g.awayH && !g.homeE && !g.awayE && (g.homeR + g.awayR) > 0).length;
   app.innerHTML = `<div class="section-head"><h1>Settings</h1></div>
     <div class="grid">

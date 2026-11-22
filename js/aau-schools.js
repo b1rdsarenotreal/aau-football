@@ -1,4 +1,4 @@
-import { CONF_LOGO_LINKS } from './conf-links.js?v=20261122124702';
+import { CONF_LOGO_LINKS } from './conf-links.js?v=20261122131034';
 
 // Every AAU member school, for the "AAU school" pick on the Add team form:
 // abbreviation, mascot, colors, city and the conference it plays in in the
@@ -134,7 +134,7 @@ export const AAU_CONFERENCES = {
 // team form fills these in too.
 // Home venue and 2026 head coach of every AAU football program, for the Add
 // team form and realignment joins (from PROGRAM_INFO in js/data.js).
-import { PROGRAM_INFO } from './data.js?v=20261122124702';
+import { PROGRAM_INFO } from './data.js?v=20261122131034';
 export const AAU_PROGRAMS = {
   get men() { return Object.fromEntries(Object.entries(PROGRAM_INFO).map(([s, p]) => [s, { stadium: p.stadium, coach: p.coach }])); },
 };

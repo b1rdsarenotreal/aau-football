@@ -1,15 +1,15 @@
 // Season pages: home, schedule, standings, rankings and postseason.
 
-import { ctx, S, app, modal, $, $$, esc, toast, changed, persist, cache, team, teamOptions, teamNames, confLogo, confHref, confColor, confInfo, gameCard, compactCard, placeholderCard, bindGameCards, openGame, resultText, periodNote, DAY_NAMES, readableOn, teamInfo, logoImg, teamHref, seasonLabel } from './ui.js?v=20261122124702';
-import { isFinal, winnerOf, resultFor, records, rpi, rating, indexName, usesNpi, usesBcs, NPI_DIALS, confStandings, conferences, regSeasonChamp, regSeasonChamps, TIEBREAKERS, quadrants, quadCuts, isIndependent, INDEPENDENT } from './standings.js?v=20261122124702';
-import { latestPoll, generatePoll, pollRankMap, pollSizeOf, VOTER_PANEL, voterStyle, votersOf, addRandomVoter, removeVoter } from './polls.js?v=20261122124702';
-import { ovr } from './sim.js?v=20261122124702';
-import { COMPUTERS, latestOf } from './bcs.js?v=20261122124702';
-import { simGames, addGame, weekName } from './league.js?v=20261122124702';
-import { confClashes, CONF_FORMATS, confFormatName, confKind , regionalFirstRound, regionalSeed } from './postseason.js?v=20261122124702';
-import { COMMITTEE_TIERS, gameVenue, COMMITTEE_SHORT, committeeSheet, compareTeams, mcwsVenue, postWeeks, regWeeksOf, ncaaConfig, hasSupers, noRegionals, fieldSize, wsTeams, formatSummary, shownSeed, postseasonBonus, defaultConfTourneySize, confTourneySeeds, reseedConfTourney, proposeField, lockField, pods, nodeTeams, nodeNeeded, runnerUp, committeeOrder, autoBids, refLabel, setConfFormat, ensureLayout, confHost, setConfHost, mcwsHistory, selectionBoard, setAtLarge, confirmField, unconfirmField, bracketology, BRACKETOLOGY_FROM_WEEK } from './postseason.js?v=20261122124702';
-import { fmtPct, hashStr } from './util.js?v=20261122124702';
-import { DAY_ORDER, CONF_WEEKENDS, applyConfWeekend } from './schedule.js?v=20261122124702';
+import { ctx, S, app, modal, $, $$, esc, toast, changed, persist, cache, team, teamOptions, teamNames, confLogo, confHref, confColor, confInfo, gameCard, compactCard, placeholderCard, bindGameCards, openGame, resultText, periodNote, DAY_NAMES, readableOn, teamInfo, logoImg, teamHref, seasonLabel } from './ui.js?v=20261122131034';
+import { isFinal, winnerOf, resultFor, records, rpi, rating, indexName, usesNpi, usesBcs, NPI_DIALS, confStandings, conferences, regSeasonChamp, regSeasonChamps, TIEBREAKERS, quadrants, quadCuts, isIndependent, INDEPENDENT } from './standings.js?v=20261122131034';
+import { latestPoll, generatePoll, pollRankMap, pollSizeOf, VOTER_PANEL, voterStyle, votersOf, addRandomVoter, removeVoter } from './polls.js?v=20261122131034';
+import { ovr } from './sim.js?v=20261122131034';
+import { COMPUTERS, latestOf } from './bcs.js?v=20261122131034';
+import { simGames, addGame, weekName } from './league.js?v=20261122131034';
+import { confClashes, CONF_FORMATS, confFormatName, confKind , regionalFirstRound, regionalSeed } from './postseason.js?v=20261122131034';
+import { COMMITTEE_TIERS, gameVenue, COMMITTEE_SHORT, committeeSheet, compareTeams, mcwsVenue, postWeeks, regWeeksOf, ncaaConfig, hasSupers, noRegionals, fieldSize, wsTeams, formatSummary, shownSeed, postseasonBonus, defaultConfTourneySize, confTourneySeeds, reseedConfTourney, proposeField, lockField, pods, nodeTeams, nodeNeeded, runnerUp, committeeOrder, autoBids, refLabel, setConfFormat, ensureLayout, confHost, setConfHost, mcwsHistory, selectionBoard, setAtLarge, confirmField, unconfirmField, bracketology, BRACKETOLOGY_FROM_WEEK } from './postseason.js?v=20261122131034';
+import { fmtPct, hashStr } from './util.js?v=20261122131034';
+import { DAY_ORDER, CONF_WEEKENDS, applyConfWeekend } from './schedule.js?v=20261122131034';
 
 // " at Homewood Field, Baltimore, Md." for a host school with a home field.
 const atField = (s, school) => { const t = s.teams[school]; const f = [t?.stadium, t?.city].filter(Boolean).join(', '); return f ? ` at ${esc(f)}` : ''; };
@@ -258,7 +258,7 @@ export function renderStandings() {
     const sched = Object.fromEntries(st.map(x => [x.team, 0]));
     for (const g of s.games) if (g.type === 'regular' && g.confGame && g.home in sched && g.away in sched) { sched[g.home]++; sched[g.away]++; }
     const uneven = new Set(Object.values(sched)).size > 1;
-    const played = s.games.filter(g => g.type === 'regular' && isFinal(g)).reduce((m, g) => Math.max(m, g.week), 0);
+    const played = s.games.filter(g => g.type === 'regular' && isFinal(g) && !g.filler).reduce((m, g) => Math.max(m, g.week), 0);
     return `<section class="st-card" style="${confVars(c)}">
       ${confHead(c, played ? `Standings through week ${played} · conference record first` : 'Before the first game', `${champ ? `<span class="badge">Regular season: ${esc(champ)}</span>` : ''}${tchamp ? `<span class="badge gold">Tournament: ${esc(tchamp)}</span>` : ''}`)}
       ${uneven ? `<div class="hint warn small st-pad">Conference schedules are uneven: ${Object.entries(sched).sort((a, b) => b[1] - a[1]).map(([t, n]) => `${esc(t)} ${n}`).join(', ')} conference games. This usually comes from editing games by hand; fix the games or rebuild the schedule in Settings.</div>` : ''}

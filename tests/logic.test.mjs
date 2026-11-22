@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { newLeague, currentSeason, simGames, startNextSeason, beginOffseason, migrateLeague, weekName, rebuildSchedule } from '../js/league.js';
 import { simulateGame, matchOdds, simulatedWinRate, ovr } from '../js/sim.js';
 import { confTarget, dateOf, generateSchedule, isFiller, FCS_OPPONENTS, DEFAULT_RIVALRIES, MARQUEE_MAX } from '../js/schedule.js';
-import { isFinal, rating, records, indexName } from '../js/standings.js';
+import { isFinal, rating, records, indexName, confStandings, confPct } from '../js/standings.js';
 import { bcs, computerRanks, COMPUTERS } from '../js/bcs.js';
 import { postWeeks, autoBids, aqConferences, fieldSize, ncaaConfig, shownSeed, setAtLarge, selectionBoard } from '../js/postseason.js';
 import { homeAwayRuns, MAX_AWAY, MAX_HOME } from '../js/homeaway.js';
@@ -195,6 +195,21 @@ check('a ranked team on a bye drops two spots at most, in both polls', () => {
     }
   }
   assert.ok(byes > 20, `${byes} byes`);
+});
+
+check('conference standings go by conference winning percentage', () => {
+  const L = newLeague({ year: 2033 }), s = currentSeason(L);
+  simGames(s, g => g.type === 'regular' && g.week <= 7);
+  const recs = records(s, g => g.type === 'regular');
+  let uneven = 0;
+  for (const c of new Set(Object.values(s.teams).map(t => t.conference))) {
+    const st = confStandings(s, c, recs);
+    for (let i = 1; i < st.length; i++) assert.ok(st[i - 1].pct >= st[i].pct, `${c}: ${st[i - 1].team} ${st[i - 1].pct} above ${st[i].team} ${st[i].pct}`);
+    if (new Set(st.map(x => x.cw + x.cl)).size > 1) uneven++;
+  }
+  assert.ok(uneven > 0, 'some teams have played fewer conference games mid-season');
+  assert.equal(confPct({ cw: 3, cl: 1, ct: 0 }), 0.75);
+  assert.equal(confPct({ cw: 0, cl: 0, ct: 0 }), 0.5);
 });
 
 check('the BCS standings: two polls and six computers, a third each', () => {

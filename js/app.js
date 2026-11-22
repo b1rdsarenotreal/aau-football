@@ -1,13 +1,13 @@
 // App shell: loading the dynasty, the top bar, and page routing.
 
-import { loadLeague, saveLeague, currentSide, otherAppsYear } from './store.js?v=20261122140659';
-import { START_YEAR } from './data.js?v=20261122140659';
-import { loadLogoTable } from './logos.js?v=20261122140659';
-import { newLeague, afterChange, migrateLeague } from './league.js?v=20261122140659';
-import { ctx, app, cache, persist, esc, flushSave, seasonLabel } from './ui.js?v=20261122140659';
-import { renderHome, renderSchedule, renderStandings, renderRankings, renderPostseason, resetSeasonUi } from './views-season.js?v=20261122140659';
-import { renderRecords } from './views-records.js?v=20261122140659';
-import { renderTeams, renderTeamPage, renderConferences, renderConferencePage, renderHistory, renderSettings, renderOffseason, renderCoaches, renderCoachPage } from './views-league.js?v=20261122140659';
+import { loadLeague, saveLeague, currentSide, otherAppsYear } from './store.js?v=20261122140949';
+import { START_YEAR } from './data.js?v=20261122140949';
+import { loadLogoTable } from './logos.js?v=20261122140949';
+import { newLeague, afterChange, migrateLeague } from './league.js?v=20261122140949';
+import { ctx, app, cache, persist, esc, flushSave, seasonLabel } from './ui.js?v=20261122140949';
+import { renderHome, renderSchedule, renderStandings, renderRankings, renderPostseason, resetSeasonUi } from './views-season.js?v=20261122140949';
+import { renderRecords } from './views-records.js?v=20261122140949';
+import { renderTeams, renderTeamPage, renderConferences, renderConferencePage, renderHistory, renderSettings, renderOffseason, renderCoaches, renderCoachPage } from './views-league.js?v=20261122140949';
 
 const VIEWS = { home: 'Home', schedule: 'Schedule', standings: 'Standings', rankings: 'Rankings', postseason: 'Postseason', offseason: 'Offseason', teams: 'Teams', coaches: 'Coaches', conferences: 'Conferences', history: 'History', records: 'Records', settings: 'Settings' };
 const SUBVIEWS = { team: 'teams', conference: 'conferences', coach: 'coaches' };

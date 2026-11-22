@@ -1,15 +1,15 @@
 // Season pages: home, schedule, standings, rankings and postseason.
 
-import { ctx, S, app, modal, $, $$, esc, toast, changed, persist, cache, team, teamOptions, teamNames, confLogo, confHref, confColor, confInfo, gameCard, compactCard, placeholderCard, bindGameCards, openGame, resultText, periodNote, DAY_NAMES, readableOn, teamInfo, logoImg, teamHref, seasonLabel } from './ui.js?v=20261122140659';
-import { isFinal, winnerOf, resultFor, records, rpi, rating, indexName, usesNpi, usesBcs, NPI_DIALS, confStandings, conferences, regSeasonChamp, regSeasonChamps, TIEBREAKERS, quadrants, quadCuts, isIndependent, INDEPENDENT } from './standings.js?v=20261122140659';
-import { latestPoll, generatePoll, pollRankMap, pollSizeOf, VOTER_PANEL, voterStyle, votersOf, addRandomVoter, removeVoter } from './polls.js?v=20261122140659';
-import { ovr } from './sim.js?v=20261122140659';
-import { COMPUTERS, latestOf } from './bcs.js?v=20261122140659';
-import { simGames, addGame, weekName } from './league.js?v=20261122140659';
-import { confClashes, CONF_FORMATS, confFormatName, confKind , regionalFirstRound, regionalSeed } from './postseason.js?v=20261122140659';
-import { COMMITTEE_TIERS, gameVenue, COMMITTEE_SHORT, committeeSheet, compareTeams, mcwsVenue, postWeeks, regWeeksOf, ncaaConfig, hasSupers, noRegionals, fieldSize, wsTeams, formatSummary, shownSeed, postseasonBonus, defaultConfTourneySize, confTourneySeeds, reseedConfTourney, proposeField, lockField, pods, nodeTeams, nodeNeeded, runnerUp, committeeOrder, autoBids, refLabel, setConfFormat, ensureLayout, confHost, setConfHost, mcwsHistory, selectionBoard, setAtLarge, confirmField, unconfirmField, bracketology, BRACKETOLOGY_FROM_WEEK } from './postseason.js?v=20261122140659';
-import { fmtPct, hashStr } from './util.js?v=20261122140659';
-import { DAY_ORDER, CONF_WEEKENDS, applyConfWeekend } from './schedule.js?v=20261122140659';
+import { ctx, S, app, modal, $, $$, esc, toast, changed, persist, cache, team, teamOptions, teamNames, confLogo, confHref, confColor, confInfo, gameCard, compactCard, placeholderCard, bindGameCards, openGame, resultText, periodNote, DAY_NAMES, readableOn, teamInfo, logoImg, teamHref, seasonLabel } from './ui.js?v=20261122140949';
+import { isFinal, winnerOf, resultFor, records, rpi, rating, indexName, usesNpi, usesBcs, NPI_DIALS, confStandings, conferences, regSeasonChamp, regSeasonChamps, TIEBREAKERS, quadrants, quadCuts, isIndependent, INDEPENDENT } from './standings.js?v=20261122140949';
+import { latestPoll, generatePoll, pollRankMap, pollSizeOf, VOTER_PANEL, voterStyle, votersOf, addRandomVoter, removeVoter } from './polls.js?v=20261122140949';
+import { ovr } from './sim.js?v=20261122140949';
+import { COMPUTERS, latestOf } from './bcs.js?v=20261122140949';
+import { simGames, addGame, weekName } from './league.js?v=20261122140949';
+import { confClashes, CONF_FORMATS, confFormatName, confKind , regionalFirstRound, regionalSeed } from './postseason.js?v=20261122140949';
+import { COMMITTEE_TIERS, gameVenue, COMMITTEE_SHORT, committeeSheet, compareTeams, mcwsVenue, postWeeks, regWeeksOf, ncaaConfig, hasSupers, noRegionals, fieldSize, wsTeams, formatSummary, shownSeed, postseasonBonus, defaultConfTourneySize, confTourneySeeds, reseedConfTourney, proposeField, lockField, pods, nodeTeams, nodeNeeded, runnerUp, committeeOrder, autoBids, refLabel, setConfFormat, ensureLayout, confHost, setConfHost, mcwsHistory, selectionBoard, setAtLarge, confirmField, unconfirmField, bracketology, BRACKETOLOGY_FROM_WEEK } from './postseason.js?v=20261122140949';
+import { fmtPct, hashStr } from './util.js?v=20261122140949';
+import { DAY_ORDER, CONF_WEEKENDS, applyConfWeekend } from './schedule.js?v=20261122140949';
 
 // " at Homewood Field, Baltimore, Md." for a host school with a home field.
 const atField = (s, school) => { const t = s.teams[school]; const f = [t?.stadium, t?.city].filter(Boolean).join(', '); return f ? ` at ${esc(f)}` : ''; };
@@ -238,7 +238,7 @@ export function renderStandings() {
   const indepCard = indep.length ? `<div class="card"><div class="row" style="margin-bottom:8px"><a href="${confHref(INDEPENDENT)}">${confLogo(INDEPENDENT, 30)}</a><h2 style="margin:0"><a class="team-link" href="${confHref(INDEPENDENT)}">Independents</a></h2><span class="spacer"></span><span class="muted small">No conference: at-large bids only</span></div>
       <div class="table-wrap"><table><thead><tr><th></th><th>Team</th><th class="num">Overall</th><th class="num">${indexName(s)}</th><th class="num">Home</th><th class="num">Away</th><th class="num">Strk</th></tr></thead>
         <tbody>${indep.map((t, i) => `<tr><td class="num muted">${i + 1}</td><td>${team(t)}</td><td class="num"><b>${recs[t].w}-${recs[t].l}</b></td><td class="num">${r[t]?.rank ?? '—'}</td><td class="num">${recs[t].hw}-${recs[t].hl}</td><td class="num">${recs[t].aw}-${recs[t].al}</td><td class="num">${recs[t].streak || ''}</td></tr>`).join('')}</tbody></table></div></div>` : '';
-  const gbText = x => (x.gb ? (x.gb / 3).toFixed(1).replace('.0', '') : '—');
+  const pctText = x => (x.cw + x.cl + (x.ct || 0) ? x.pct.toFixed(3).replace(/^0/, '') : '—');
   // The last five results, postseason included (the owner's call, Nov.
   // 2026); hovering them shows the five games in the same pop-up as the
   // poll's week records. The streak counts every game too.
@@ -263,10 +263,10 @@ export function renderStandings() {
       ${confHead(c, played ? `Standings through week ${played} · conference record first` : 'Before the first game', `${champ ? `<span class="badge">Regular season: ${esc(champ)}</span>` : ''}${tchamp ? `<span class="badge gold">Tournament: ${esc(tchamp)}</span>` : ''}`)}
       ${uneven ? `<div class="hint warn small st-pad">Conference schedules are uneven: ${Object.entries(sched).sort((a, b) => b[1] - a[1]).map(([t, n]) => `${esc(t)} ${n}`).join(', ')} conference games. This usually comes from editing games by hand; fix the games or rebuild the schedule in Settings.</div>` : ''}
       <div class="table-wrap"><table class="st-table">
-        <thead><tr><th class="num">#</th><th>Team</th><th class="num st-c">Conf</th><th class="num st-c" title="Games behind the leader">GB</th><th class="num">Overall</th><th class="num" title="Points for and against">PF–PA</th><th class="num">Home</th><th class="num">Away</th><th class="num">Strk</th><th>Last 5</th></tr></thead>
+        <thead><tr><th class="num">#</th><th>Team</th><th class="num st-c">Conf</th><th class="num st-c" title="Conference winning percentage">Pct</th><th class="num">Overall</th><th class="num" title="Points for and against">PF–PA</th><th class="num">Home</th><th class="num">Away</th><th class="num">Strk</th><th>Last 5</th></tr></thead>
         <tbody>${st.map((x, i) => `<tr class="${i === size - 1 && size < n ? 'cutline' : ''}"><td class="num st-pos">${i + 1}</td>
           <td>${team(x.team, { size: 26 })}</td>
-          <td class="num st-c"><b>${x.cw}-${x.cl}</b></td><td class="num st-c">${gbText(x)}</td>
+          <td class="num st-c"><b>${x.cw}-${x.cl}</b></td><td class="num st-c">${pctText(x)}</td>
           <td class="num">${recs[x.team].w}-${recs[x.team].l}</td><td class="num muted">${recs[x.team].rs}–${recs[x.team].ra}</td><td class="num muted">${x.hw}-${x.hl}</td><td class="num muted">${x.aw}-${x.al}</td>
           <td class="num">${strk(x.team)}</td><td>${last5(x.team)}</td></tr>`).join('')}</tbody></table></div>
       <div class="st-legend"><span><b class="st-rk">5</b> Top ${pollSizeOf(s)} rank</span><span><span class="l5 w">W</span> Win</span><span><span class="l5 l">L</span> Loss</span>${size && size < n ? `<span><i class="st-cut"></i> Conference tournament cut (top ${size})</span>` : ''}</div>
@@ -284,8 +284,8 @@ export function renderStandings() {
     const st = confStandings(s, c, regRecs, r), n = st.length;
     const size = Math.min(n, s.settings.confTourney?.[c] ?? defaultConfTourneySize(n));
     return `<section class="st-card compact" style="${confVars(c)}">${confHead(c, '', '', `data-stc="${esc(c)}"`, 28)}
-      <div class="table-wrap"><table class="st-table"><thead><tr><th></th><th>Team</th><th class="num st-c">Conf</th><th class="num st-c">GB</th><th class="num">Overall</th></tr></thead>
-        <tbody>${st.map((x, i) => `<tr class="${i === size - 1 && size < n ? 'cutline' : ''}"><td class="num st-pos">${i + 1}</td><td>${team(x.team, { size: 22 })}</td><td class="num st-c"><b>${x.cw}-${x.cl}</b></td><td class="num st-c">${gbText(x)}</td><td class="num muted">${recs[x.team].w}-${recs[x.team].l}</td></tr>`).join('')}</tbody></table></div></section>`;
+      <div class="table-wrap"><table class="st-table"><thead><tr><th></th><th>Team</th><th class="num st-c">Conf</th><th class="num st-c">Pct</th><th class="num">Overall</th></tr></thead>
+        <tbody>${st.map((x, i) => `<tr class="${i === size - 1 && size < n ? 'cutline' : ''}"><td class="num st-pos">${i + 1}</td><td>${team(x.team, { size: 22 })}</td><td class="num st-c"><b>${x.cw}-${x.cl}</b></td><td class="num st-c">${pctText(x)}</td><td class="num muted">${recs[x.team].w}-${recs[x.team].l}</td></tr>`).join('')}</tbody></table></div></section>`;
   };
   const pick = confs.includes(ui.standConf) || (ui.standConf === INDEPENDENT && indep.length) ? ui.standConf : 'all';
   const side = (v, label, logo, cvars = '') => `<button type="button" class="st-link ${pick === v ? 'active' : ''}" data-stc="${esc(v)}" aria-pressed="${pick === v}" style="${cvars}">${logo}<span>${label}</span></button>`;

@@ -1,8 +1,8 @@
 // Records, conference standings with tiebreakers, the RPI, the NPI and (in
 // js/bcs.js) the BCS standings.
 
-import { pct, hashStr } from './util.js?v=20261122140659';
-import { bcs } from './bcs.js?v=20261122140659';
+import { pct, hashStr } from './util.js?v=20261122140949';
+import { bcs } from './bcs.js?v=20261122140949';
 
 export const isFinal = g => g.final && g.homeR != null && g.awayR != null;
 // Lacrosse has no ties: a game tied after 60 minutes goes to sudden-victory
@@ -18,6 +18,9 @@ export const resultFor = (g, t) => (isTie(g) ? 'T' : winnerOf(g) === t ? 'W' : '
 export const POINTS = { W: 3, T: 1, L: 0 };
 // Conference points from a record.
 export const confPts = r => 3 * r.cw + r.ct;
+// Conference winning percentage (a tie is half), the standings' order (the
+// owner's rule, Nov. 2026). A team with no conference games yet sits at .500.
+export const confPct = r => { const n = r.cw + r.cl + (r.ct || 0); return n ? (r.cw + (r.ct || 0) / 2) / n : 0.5; };
 
 function blank() {
   return { w: 0, l: 0, t: 0, cw: 0, cl: 0, ct: 0, hw: 0, hl: 0, ht: 0, aw: 0, al: 0, at: 0, nw: 0, nl: 0, nt: 0, rs: 0, ra: 0, streak: '', results: [] };
@@ -272,7 +275,7 @@ function tiers(group, score) {
 }
 
 export const TIEBREAKERS = [
-  'Conference points (3 for a win, 1 for a tie)',
+  'Conference winning percentage',
   'Head-to-head points among all the tied teams (teams still tied start over with head-to-head among just them)',
   'Points against common conference opponents, starting with the highest-placed opponent and working down',
   'NPI (the RPI in seasons before the switch)',
@@ -316,13 +319,13 @@ function breakTie(season, conf, group, others, r, why) {
   return [...group].sort((a, b) => flip(a) - flip(b));
 }
 
-// Conference table, best first, with points (3 a win, 1 a tie) and points
-// behind the leader (`gb`). Each row's `tb` says which tiebreaker placed it,
-// when it was tied. Every member plays the same number of conference games,
-// so points rank fairly.
+// Conference table, best first by conference winning percentage (`pct`; the
+// owner's rule, Nov. 2026: teams with a bye have played fewer), with points
+// and games behind the leader (`gb`) kept for reference. Each row's `tb` says
+// which tiebreaker placed it, when it was tied.
 export function confStandings(season, conf, recs = records(season), r = rating(season)) {
   const teams = Object.values(season.teams).filter(t => t.conference === conf).map(t => t.school);
-  const cp = t => confPts(recs[t]);
+  const cp = t => confPct(recs[t]);
   const groups = [];
   for (const t of [...teams].sort((a, b) => cp(b) - cp(a) || a.localeCompare(b))) {
     const last = groups[groups.length - 1];
@@ -334,7 +337,9 @@ export function confStandings(season, conf, recs = records(season), r = rating(s
   return out.map(t => ({
     team: t, ...recs[t],
     pts: confPts(recs[t]),
-    gb: lead ? confPts(recs[lead]) - confPts(recs[t]) : 0,
+    pct: confPct(recs[t]),
+    // Games behind the leader: (wins behind + losses ahead) / 2.
+    gb: lead ? ((recs[lead].cw - recs[t].cw) + (recs[t].cl - recs[lead].cl)) / 2 : 0,
     rpiRank: r[t]?.rank ?? null,
     tb: why[t] || null,
   }));
@@ -362,8 +367,8 @@ export function regSeasonChamps(season, conf, recs = records(season, g => g.type
   if (season.overrides?.regChamps?.[conf]) return [season.overrides.regChamps[conf]];
   const st = confStandings(season, conf, recs, r);
   if (!st.length || st[0].cw + st[0].cl + st[0].ct === 0) return [];
-  const best = st[0].pts;
-  return st.filter(x => x.cw + x.cl + x.ct > 0 && x.pts === best).map(x => x.team);
+  const best = st[0].pct;
+  return st.filter(x => x.cw + x.cl + x.ct > 0 && x.pct === best).map(x => x.team);
 }
 
 // The one team that takes the top spot: the regular-season champion, or the

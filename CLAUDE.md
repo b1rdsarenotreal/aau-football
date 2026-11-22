@@ -102,6 +102,10 @@ unless the owner asks.
   `postWeeks(season).rounds` (First Round, Quarterfinals, Semifinals,
   Championship). Internal names stay `regionals`, `supers`, `mcws`; on
   screen it's the AAU Championship, never NCAA, Final Four or MCWS.
+- Conference standings go by conference winning percentage (`confPct`,
+  `confStandings`; the owner's rule, Nov. 2026), shown in a Pct column; a
+  team with no conference games sits at .500. Co-champions share the best
+  percentage.
 - On-screen text says "game".
 - The AAU look (as in the other apps): two-row top bar, scoreboard cards
   (`gameCard`), standings (`st-*`), the poll board (`pb-*`), team pages

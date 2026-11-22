@@ -131,23 +131,36 @@ check('top-third teams play at most two others out of conference, usually one', 
   assert.ok(dist[1] > dist[0] + dist[2], dist.join('/'));
 });
 
-check('a team still short plays a generic FCS opponent, a home win, as the last resort', () => {
+check('FCS games: only when a team is left short, one at most, won when its week is played', () => {
+  // 80 teams fill every non-conference date with each other.
+  const L0 = newLeague({ year: 2033 }), s0 = currentSeason(L0);
+  let prev = null;
+  for (let y = 0; y < 5; y++) { const g = generateSchedule(s0, 1300 + y, prev); assert.equal(g.filter(x => x.filler).length, 0, `year ${y}`); prev = { games: g }; }
+  // An odd team out (79 teams): one team gets one FCS game.
   const L = newLeague({ year: 2033 }), s = currentSeason(L);
-  s.settings.maxMatches = 12; rebuildSchedule(s, null);
+  delete s.teams.Rice; rebuildSchedule(s, null);
   const f = reg(s).filter(x => x.filler);
-  assert.ok(f.length > 0, 'twelve games leaves someone short');
-  for (const x of f) {
-    assert.ok(isFiller(x.away) && FCS_OPPONENTS.includes(x.away) && s.teams[x.home] && isFinal(x) && x.homeR > x.awayR, JSON.stringify(x));
-    assert.ok(!reg(s).some(y => y !== x && y.week === x.week && (y.home === x.home || y.away === x.home)), 'on an open date');
-  }
-  assert.ok(f.length < 12, `${f.length} fillers: only for the few left over`);
+  assert.equal(f.length, 1);
+  const [x] = f;
+  assert.ok(isFiller(x.away) && FCS_OPPONENTS.includes(x.away) && s.teams[x.home] && !isFinal(x), 'scheduled, not decided yet');
+  assert.ok(!reg(s).some(y => y !== x && y.week === x.week && (y.home === x.home || y.away === x.home)), 'on an open date');
   const all = count(reg(s));
-  for (const t of Object.keys(s.teams)) assert.equal(all[t], 12, t);
-  rebuildSchedule(s, null); // a filler isn't a played game
+  for (const t of Object.keys(s.teams)) assert.equal(all[t], 11, t);
+  // Playing an earlier week leaves it open; playing its week wins it.
+  simGames(s, g => g.type === 'regular' && g.week < x.week && !g.filler);
+  assert.ok(!isFinal(x));
+  const one = reg(s).find(g => g.week === x.week && !g.filler);
+  simGames(s, g => g === one);
+  assert.ok(isFinal(x) && x.homeR > x.awayR);
   simGames(s, () => true, { autoLock: true });
   assert.equal(s.phase, 'complete');
-  const recs = records(s);
-  for (const x of reg(s).filter(y => y.filler)) assert.ok(recs[x.home].w >= 1);
+  // An older save's FCS game, already won in a week not played yet, waits again.
+  const L2 = newLeague({ year: 2033 }), s2 = currentSeason(L2);
+  delete s2.teams.Rice; rebuildSchedule(s2, null);
+  const y = reg(s2).find(g => g.filler);
+  Object.assign(y, { final: true, homeLine: [14, 7, 7, 7], awayLine: [0, 3, 0, 0], homeR: 35, awayR: 3, homeH: 400, awayH: 150, homeE: 0, awayE: 1, source: 'auto' });
+  migrateLeague(L2);
+  assert.ok(!isFinal(y));
 });
 
 check('conference home and away: no more than two straight weekends away or three at home', () => {

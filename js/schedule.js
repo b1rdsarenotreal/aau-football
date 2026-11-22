@@ -15,10 +15,10 @@
 // When `prev` (last season) is given, conference opponents who met last year
 // swap home and away.
 
-import { isIndependent } from './standings.js?v=20261122132649';
-import { cityPoint, miles } from './geo.js?v=20261122132649';
-import { rng, shuffle, hashStr } from './util.js?v=20261122132649';
-import { spreadConfHomes } from './homeaway.js?v=20261122132649';
+import { isIndependent } from './standings.js?v=20261122133319';
+import { cityPoint, miles } from './geo.js?v=20261122133319';
+import { rng, shuffle, hashStr } from './util.js?v=20261122133319';
+import { spreadConfHomes } from './homeaway.js?v=20261122133319';
 
 export const DEFAULT_REG_WEEKS = 13;
 export const DEFAULT_TOURNEY_WEEKS = 0; // kept for older code paths
@@ -465,16 +465,60 @@ function drawSchedule(season, seed, prev) {
       }
     }
   }
+  // Still short: two short teams take over a non-conference game between two
+  // others (a plays c on its date, b plays d on a date they both have open),
+  // so the FCS game below is rare.
+  const bigPair = (a, b) => mq.top.has(a) && mq.top.has(b);
+  const okPair = (a, b) => a !== b && !rival(teams, a, b) && !met.has(key(a, b)) && bigN(a, b) < MARQUEE_MAX;
+  const drop = g => {
+    games.splice(games.indexOf(g), 1);
+    homeCount[g.home]--; met.delete(key(g.home, g.away)); busy[g.home].delete(g.week); busy[g.away].delete(g.week);
+    if (bigPair(g.home, g.away)) { mq.n[g.home]--; mq.n[g.away]--; }
+    need[g.home]++; need[g.away]++;
+  };
+  const undrop = g => {
+    games.push(g);
+    homeCount[g.home]++; met.add(key(g.home, g.away)); busy[g.home].add(g.week); busy[g.away].add(g.week);
+    if (bigPair(g.home, g.away)) { mq.n[g.home]++; mq.n[g.away]++; }
+    need[g.home]--; need[g.away]--;
+  };
+  const book = (w, a, b) => {
+    const [h, aw] = orient(a, b); add(w, h, aw); need[a]--; need[b]--;
+    if (bigPair(a, b)) { mq.n[a] = (mq.n[a] || 0) + 1; mq.n[b] = (mq.n[b] || 0) + 1; }
+  };
+  const weeks = Array.from({ length: REG }, (_, i) => i + 1);
+  for (let guard = 0; guard < 200; guard++) {
+    const short = shuffle(names.filter(t => need[t] > 0), r);
+    let done = false;
+    for (const a of short) {
+      for (const b of short) {
+        if (b === a && need[a] < 2) continue;
+        for (const g of shuffle(games.filter(x => x.type === 'regular' && !x.confGame && !x.rivalry && !x.filler && !busy[a].has(x.week)), r)) {
+          for (const [c, d] of [[g.home, g.away], [g.away, g.home]]) {
+            if (c === b || d === a || !okPair(a, c) || !okPair(b, d)) continue;
+            drop(g);
+            const w2 = weeks.find(x => !busy[b].has(x) && !busy[d].has(x) && (x !== g.week || a !== b));
+            if (w2) { book(g.week, a, c); book(w2, b, d); done = true; break; }
+            undrop(g);
+          }
+          if (done) break;
+        }
+        if (done) break;
+      }
+      if (done) break;
+    }
+    if (!done) break;
+  }
   // Last resort (the owner's rule, Nov. 2026): a team still short plays a
   // generic FCS opponent from its part of the country at home, as in the
-  // NCAA Football video games, an automatic win on an open date.
+  // NCAA Football video games, on an open date; at most one a season. It's
+  // an automatic win once its week is played (`playDueFillers` in league.js).
   for (const a of names) {
-    while (need[a] > 0) {
-      const w = [1, 2, 3, ...Array.from({ length: REG - 3 }, (_, i) => i + 4)].find(x => x <= REG && !busy[a].has(x));
-      if (!w) break;
-      games.push(fillerGame(season, a, w, fcsName(pts[a]), r));
-      busy[a].add(w); homeCount[a]++; need[a]--;
-    }
+    if (need[a] <= 0) continue;
+    const w = [1, 2, 3, ...Array.from({ length: REG - 3 }, (_, i) => i + 4)].find(x => x <= REG && !busy[a].has(x));
+    if (!w) continue;
+    games.push(fillerGame(season, a, w, fcsName(pts[a])));
+    busy[a].add(w); homeCount[a]++; need[a]--;
   }
   games.sort((a, b) => a.week - b.week || a.order - b.order);
   return games;
@@ -508,16 +552,22 @@ export function fcsName(pt) {
   if (lon < -84) return 'FCS Midwest';
   return 'FCS Northeast';
 }
-// A last-resort game against a generic FCS team: at home, already final, a
-// win (the score is made up, a few points a quarter for the visitor).
-export function fillerGame(season, team, week, opp, r) {
+// A last-resort game against a generic FCS team, at home: scheduled like any
+// other game; `fillerResult` is its score, a win, when the week is played.
+export function fillerGame(season, team, week, opp) {
+  return blankGame(season, { week, day: 'Sat', order: DAY_ORDER.Sat, home: team, away: opp, filler: true });
+}
+// The made-up score of a game against a generic FCS team: an easy home win,
+// a few points a quarter for the visitor.
+export function fillerResult(r) {
   const homeLine = Array.from({ length: 4 }, () => [7, 14, 10, 14, 7, 21, 3, 17][Math.floor(r() * 8)]);
   const awayLine = Array.from({ length: 4 }, () => [0, 0, 0, 3, 7, 0, 0, 3][Math.floor(r() * 8)]);
   const R = l => l.reduce((x, y) => x + y, 0);
-  return blankGame(season, {
-    week, day: 'Sat', order: DAY_ORDER.Sat, home: team, away: opp, filler: true, final: true, source: 'auto',
-    homeLine, awayLine, homeR: R(homeLine), awayR: R(awayLine), homeH: 380 + Math.round(r() * 180), awayH: 150 + Math.round(r() * 90), homeE: Math.round(r() * 1.4), awayE: 1 + Math.round(r() * 2),
-  });
+  return {
+    homeLine, awayLine, innings: 4, runRule: false, pk: null,
+    home: { R: R(homeLine), H: 380 + Math.round(r() * 180), E: Math.round(r() * 1.4) },
+    away: { R: R(awayLine), H: 150 + Math.round(r() * 90), E: 1 + Math.round(r() * 2) },
+  };
 }
 
 // A conference's pairings for the season: everyone once when `g` is n − 1,

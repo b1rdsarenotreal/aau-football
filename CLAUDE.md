@@ -53,11 +53,14 @@ unless the owner asks.
   than one below (`aimCost`). Top-third teams play each other out of
   conference at most `MARQUEE_MAX` (2) times a season, usually once (the
   owner's rule, Nov. 2026; rivalry games count; a second costs `MARQUEE`).
-  Teams left short pair up on open weeks; as the
-  last resort (the owner's rule) a team still short hosts a generic FCS
-  opponent from its region (`FCS_OPPONENTS`: FCS West, Southwest, Midwest,
-  Southeast, Northeast; `fcsName`), an automatic win (`fillerGame`,
-  `g.filler`, created final). Filler opponents aren't teams: `teamInfo`
+  Teams left short pair up on open weeks, then two short teams take over a
+  non-conference game between two others; as the last resort (the owner's
+  rule) a team still short hosts a generic FCS opponent from its region
+  (`FCS_OPPONENTS`: FCS West, Southwest, Midwest, Southeast, Northeast;
+  `fcsName`), one at most a season, so only with an odd team out
+  (`fillerGame`, `g.filler`). It's scheduled like any game and becomes an
+  automatic win (`fillerResult`) once its week is played (`playDueFillers`
+  in `afterChange`: a result that week or later), never at build time. Filler opponents aren't teams: `teamInfo`
   gives them a plain badge, they're left out of the RPI, NPI and BCS, a
   filler isn't a "played" game (rebuilding the schedule still works), and
   `simResult` re-rolls one as another easy win. A one-team conference (UC Davis in the UCAA,

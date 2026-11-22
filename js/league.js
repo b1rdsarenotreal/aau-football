@@ -1,15 +1,15 @@
 // League (dynasty) lifecycle: creating the league, saving results,
 // simulating, adding teams and conferences, and rolling into new seasons.
 
-import { DEFAULT_LOGOS, AAU_LOGO_SET } from './logo-import.js?v=20261122132649';
-import { START_YEAR, CONFERENCES, CONF_LOGO_LINKS, COACHES, SIDES, sideOf, conferencesFor, seedTeams, makeTeam, fillSite } from './data.js?v=20261122132649';
-import { generateSchedule, fillerGame, blankGame, DAY_ORDER, DEFAULT_REG_WEEKS, DEFAULT_TOURNEY_WEEKS, DEFAULT_CONF_MATCHES, DEFAULT_MAX_MATCHES, PER_WEEK, confWeeksFor, confWeeksMax, confRounds, confSeriesCounts, confTarget } from './schedule.js?v=20261122132649';
-import { simulateGame, estimateHitsErrors } from './sim.js?v=20261122132649';
-import { generatePoll, releaseDuePolls } from './polls.js?v=20261122132649';
-import { replayRatings, ensureBase } from './ratings.js?v=20261122132649';
-import { progress, lockField, postWeeks, allEvents, regWeeksOf, fieldSize, DEFAULT_NCAA, OLD_DEFAULT_NCAA, pickConfHosts, postseasonFinish, citySiteNames, wsTeams, aqMinOf } from './postseason.js?v=20261122132649';
-import { isFinal, records, INDEPENDENT } from './standings.js?v=20261122132649';
-import { rng, normal, clamp, hashStr } from './util.js?v=20261122132649';
+import { DEFAULT_LOGOS, AAU_LOGO_SET } from './logo-import.js?v=20261122133319';
+import { START_YEAR, CONFERENCES, CONF_LOGO_LINKS, COACHES, SIDES, sideOf, conferencesFor, seedTeams, makeTeam, fillSite } from './data.js?v=20261122133319';
+import { generateSchedule, fillerResult, blankGame, DAY_ORDER, DEFAULT_REG_WEEKS, DEFAULT_TOURNEY_WEEKS, DEFAULT_CONF_MATCHES, DEFAULT_MAX_MATCHES, PER_WEEK, confWeeksFor, confWeeksMax, confRounds, confSeriesCounts, confTarget } from './schedule.js?v=20261122133319';
+import { simulateGame, estimateHitsErrors } from './sim.js?v=20261122133319';
+import { generatePoll, releaseDuePolls } from './polls.js?v=20261122133319';
+import { replayRatings, ensureBase } from './ratings.js?v=20261122133319';
+import { progress, lockField, postWeeks, allEvents, regWeeksOf, fieldSize, DEFAULT_NCAA, OLD_DEFAULT_NCAA, pickConfHosts, postseasonFinish, citySiteNames, wsTeams, aqMinOf } from './postseason.js?v=20261122133319';
+import { isFinal, records, INDEPENDENT } from './standings.js?v=20261122133319';
+import { rng, normal, clamp, hashStr } from './util.js?v=20261122133319';
 
 export const SCHEMA_VERSION = 4;
 
@@ -144,15 +144,22 @@ export function simResult(season, g, seed) {
   const s = season.settings;
   // A last-resort game against a generic FCS team stays an easy win.
   if (g.filler || !season.teams[g.away]) {
-    const f = fillerGame(season, g.home, g.week, g.away, rng(seed ?? hashStr(`${season.year}|${g.id}`)));
-    season.nextId--; // fillerGame took an id it doesn't keep
-    return { homeLine: f.homeLine, awayLine: f.awayLine, home: { R: f.homeR, H: f.homeH, E: f.homeE }, away: { R: f.awayR, H: f.awayH, E: f.awayE }, innings: 4, runRule: false, pk: null };
+    return fillerResult(rng(seed ?? hashStr(`${season.year}|${g.id}`)));
   }
   return simulateGame(season.teams[g.home], season.teams[g.away], g, { seed, volatility: s.volatility, otMinutes: s.otMinutes });
 }
 
+// A game against a generic FCS team is an automatic win once its week is
+// played: when a game of that week or later has a result (the owner's rule,
+// Nov. 2026). It isn't decided while the schedule is built.
+export function playDueFillers(season) {
+  const played = season.games.reduce((m, g) => (g.type === 'regular' && !g.filler && isFinal(g) ? Math.max(m, g.week) : m), 0);
+  for (const g of season.games) if (g.filler && !isFinal(g) && g.week <= played) applyResult(g, simResult(season, g), 'auto');
+}
+
 // After any change: advance brackets and release polls that are due.
 export function afterChange(season) {
+  playDueFillers(season);
   replayRatings(season);
   progress(season);
   releaseDuePolls(season, postWeeks(season).conf);
@@ -598,6 +605,12 @@ export function ensureIndependent(league) {
 export function migrateLeague(league) {
   league.sport ||= 'football'; // lets AAU History know the sport
   ensureIndependent(league);
+  // FCS games used to be won as the schedule was built; one in a week not
+  // played yet waits for its week now (the owner's rule, Nov. 2026).
+  for (const s of Object.values(league.seasons || {})) {
+    const played = (s.games || []).reduce((m, g) => (g.type === 'regular' && !g.filler && isFinal(g) ? Math.max(m, g.week) : m), 0);
+    for (const g of s.games || []) if (g.filler && isFinal(g) && g.week > played) { clearResult(g); league.migrated = true; }
+  }
   // Conferences still on a drawn logo the owner has since replaced with a
   // link (CONF_LOGO_LINKS) take the link; logos set by hand stay.
   for (const c of Object.values(league.conferences || {})) {

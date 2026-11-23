@@ -1,15 +1,15 @@
 // Season pages: home, schedule, standings, rankings and postseason.
 
-import { ctx, S, app, modal, $, $$, esc, toast, changed, persist, cache, team, teamOptions, teamNames, confLogo, confHref, confColor, confInfo, gameCard, compactCard, placeholderCard, bindGameCards, openGame, resultText, periodNote, DAY_NAMES, readableOn, teamInfo, logoImg, teamHref, seasonLabel } from './ui.js?v=20261122165654';
-import { isFinal, winnerOf, resultFor, records, rpi, rating, indexName, usesNpi, usesBcs, NPI_DIALS, confStandings, conferences, regSeasonChamp, regSeasonChamps, TIEBREAKERS, quadrants, quadCuts, isIndependent, INDEPENDENT } from './standings.js?v=20261122165654';
-import { latestPoll, generatePoll, pollRankMap, pollSizeOf, VOTER_PANEL, voterStyle, votersOf, addRandomVoter, removeVoter } from './polls.js?v=20261122165654';
-import { ovr } from './sim.js?v=20261122165654';
-import { COMPUTERS, latestOf } from './bcs.js?v=20261122165654';
-import { simGames, addGame, weekName } from './league.js?v=20261122165654';
-import { SEEDED, regionName, confClashes, CONF_FORMATS, confFormatName, confKind , regionalFirstRound, regionalSeed } from './postseason.js?v=20261122165654';
-import { COMMITTEE_TIERS, gameVenue, COMMITTEE_SHORT, committeeSheet, compareTeams, mcwsVenue, postWeeks, regWeeksOf, ncaaConfig, hasSupers, noRegionals, fieldSize, wsTeams, formatSummary, shownSeed, postseasonBonus, defaultConfTourneySize, confTourneySeeds, reseedConfTourney, proposeField, lockField, pods, nodeTeams, nodeNeeded, runnerUp, committeeOrder, autoBids, refLabel, setConfFormat, ensureLayout, confHost, setConfHost, mcwsHistory, selectionBoard, setAtLarge, confirmField, unconfirmField, bracketology, BRACKETOLOGY_FROM_WEEK } from './postseason.js?v=20261122165654';
-import { fmtPct, hashStr } from './util.js?v=20261122165654';
-import { DAY_ORDER, CONF_WEEKENDS, applyConfWeekend } from './schedule.js?v=20261122165654';
+import { ctx, S, app, modal, $, $$, esc, toast, changed, persist, cache, team, teamOptions, teamNames, confLogo, confHref, confColor, confInfo, gameCard, compactCard, placeholderCard, bindGameCards, openGame, resultText, periodNote, DAY_NAMES, readableOn, teamInfo, logoImg, teamHref, seasonLabel } from './ui.js?v=20261122170205';
+import { isFinal, winnerOf, resultFor, records, rpi, rating, indexName, usesNpi, usesBcs, NPI_DIALS, confStandings, conferences, regSeasonChamp, regSeasonChamps, TIEBREAKERS, quadrants, quadCuts, isIndependent, INDEPENDENT } from './standings.js?v=20261122170205';
+import { latestPoll, generatePoll, pollRankMap, pollSizeOf, VOTER_PANEL, voterStyle, votersOf, addRandomVoter, removeVoter } from './polls.js?v=20261122170205';
+import { ovr } from './sim.js?v=20261122170205';
+import { COMPUTERS, latestOf } from './bcs.js?v=20261122170205';
+import { simGames, addGame, weekName } from './league.js?v=20261122170205';
+import { SEEDED, regionName, confClashes, CONF_FORMATS, confFormatName, confKind , regionalFirstRound, regionalSeed } from './postseason.js?v=20261122170205';
+import { COMMITTEE_TIERS, gameVenue, COMMITTEE_SHORT, committeeSheet, compareTeams, mcwsVenue, postWeeks, regWeeksOf, ncaaConfig, hasSupers, noRegionals, fieldSize, wsTeams, formatSummary, shownSeed, postseasonBonus, defaultConfTourneySize, confTourneySeeds, reseedConfTourney, proposeField, lockField, pods, nodeTeams, nodeNeeded, runnerUp, committeeOrder, autoBids, refLabel, setConfFormat, ensureLayout, confHost, setConfHost, mcwsHistory, selectionBoard, setAtLarge, confirmField, unconfirmField, bracketology, BRACKETOLOGY_FROM_WEEK } from './postseason.js?v=20261122170205';
+import { fmtPct, hashStr } from './util.js?v=20261122170205';
+import { DAY_ORDER, CONF_WEEKENDS, applyConfWeekend } from './schedule.js?v=20261122170205';
 
 // " at Homewood Field, Baltimore, Md." for a host school with a home field.
 const atField = (s, school) => { const t = s.teams[school]; const f = [t?.stadium, t?.city].filter(Boolean).join(', '); return f ? ` at ${esc(f)}` : ''; };
@@ -1090,7 +1090,7 @@ function regionalPreview(s, field, podList, r) {
     const dupes = Object.entries(confs).filter(([, l]) => l.length > 1);
     const d = strengths[i] - all;
     return `<div class="reg-prev${dupes.length ? ' clash' : ''}">
-      <div class="reg-prev-head"><span class="reg-prev-title">${esc(cfg.weekly ? regionName(i) : `${teams[0]} Region`)}</span><span class="reg-prev-ovr" title="Average OVR of the region's teams, compared with the whole field">OVR ${strengths[i].toFixed(1)} <span class="${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : '−'}${Math.abs(d).toFixed(1)}</span></span></div>
+      <div class="reg-prev-head"><span class="reg-prev-title">${esc(ncaaConfig(s).weekly ? regionName(i) : `${teams[0]} Region`)}</span><span class="reg-prev-ovr" title="Average OVR of the region's teams, compared with the whole field">OVR ${strengths[i].toFixed(1)} <span class="${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : '−'}${Math.abs(d).toFixed(1)}</span></span></div>
       ${(() => {
         const row = k => { if (k == null) return '<div class="reg-prev-row bye"><span class="reg-prev-seed"></span><span class="reg-prev-team muted">Bye</span></div>'; const t = teams[k - 1], c = s.teams[t].conference, dup = confs[c].length > 1; return `<div class="reg-prev-row${dup ? ' dup' : ''}">
         <span class="reg-prev-seed">${k}</span><span class="reg-prev-team">${team(t, { rank: false, size: 16 })}</span>
@@ -1242,7 +1242,9 @@ function renderMcws(root) {
   const v = mcwsVenue(s);
   const venueBar = `<div class="venue-bar"><span class="venue-kicker">Home of the ${name}</span><span class="venue-name">${esc(v.stadium)}</span>${v.city ? `<span class="venue-city">${esc(v.city)}</span>` : ''}</div>`;
   if (!p.mcws) {
-    root.innerHTML = `${venueBar}<div class="empty">${cfg.wsSize === 8
+    root.innerHTML = `${venueBar}<div class="empty">${cfg.weekly
+      ? `Every game through the national semifinals is on campus, at the higher seed's stadium. The national championship game is at ${esc(v.stadium)}${v.city ? `, ${esc(v.city)}` : ''}.`
+      : cfg.wsSize === 8
       ? `Eight teams reach the ${name}: quarterfinals, semifinals and the national final, one game each.`
       : `Four teams reach the ${name}: two national semifinals on Thursday and the national final on Sunday.`}</div>`;
     return;

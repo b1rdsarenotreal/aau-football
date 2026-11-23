@@ -94,8 +94,9 @@ unless the owner asks.
   rest in BCS order (no tiers) and the commissioner picks the at-large teams
   and the seeds on the Selection tab. Default 16 teams, four brackets of
   four (`regionals` 4, `perRegional` 4; Settings offers 8, 12, 16, 24, 32),
-  one round a week from the week after the regular season, every game at
-  the higher national seed's stadium (`bySeed`) through the semifinals, then
+  one round a week from the week after the regular season, every game on campus at
+  the higher national seed's stadium (`bySeed`) through the semifinals
+  (`gameVenue` gives a non-neutral `mcws` game its home stadium), then
   the championship game on the Monday `finalGap` (3) weeks later at
   `mcwsVenue` (FirstBank Stadium, Nashville). Seeds 1 to `SEEDED` (16) show
   on screen and the rest of a bigger field is unseeded (`shownSeed`,

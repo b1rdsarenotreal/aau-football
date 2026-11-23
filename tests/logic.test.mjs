@@ -5,7 +5,7 @@ import { simulateGame, matchOdds, simulatedWinRate, ovr } from '../js/sim.js';
 import { confTarget, dateOf, generateSchedule, isFiller, FCS_OPPONENTS, DEFAULT_RIVALRIES, MARQUEE_MAX } from '../js/schedule.js';
 import { isFinal, rating, records, indexName, confStandings, confPct } from '../js/standings.js';
 import { bcs, computerRanks, COMPUTERS } from '../js/bcs.js';
-import { postWeeks, autoBids, aqConferences, fieldSize, ncaaConfig, shownSeed, SEEDED, setAtLarge, selectionBoard } from '../js/postseason.js';
+import { gameVenue, postWeeks, autoBids, aqConferences, fieldSize, ncaaConfig, shownSeed, SEEDED, setAtLarge, selectionBoard } from '../js/postseason.js';
 import { homeAwayRuns, MAX_AWAY, MAX_HOME } from '../js/homeaway.js';
 import { seedTeams, COACHES, PROGRAM_INFO } from '../js/data.js';
 import { recordBook } from '../js/records.js';
@@ -255,6 +255,7 @@ check('a season: regular-season champions take the bids, 16-team field, a round 
   for (const g of post) {
     if (g.week === W.final) { assert.ok(g.neutral && g.day === 'Mon'); continue; }
     assert.ok(!g.neutral && shownSeed(s, g.home) < shownSeed(s, g.away), `${g.label}: the higher seed hosts`);
+    assert.equal(gameVenue(s, g).stadium, s.teams[g.home].stadium, `${g.label}: on campus`);
   }
   assert.equal(weekName(R + 1, s), 'First Round'); assert.equal(weekName(W.mcws, s), 'Semifinals'); assert.equal(weekName(W.final, s), 'Championship');
   assert.ok(s.polls.final && s.coachPolls.final);

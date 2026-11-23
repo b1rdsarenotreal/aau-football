@@ -15,10 +15,10 @@
 // supers and mcws. The format is locked into the season when the field is
 // announced.
 
-import { blankGame, DAY_ORDER } from './schedule.js?v=20261122165654';
-import { sameConf, records, rpi, rating, indexName, usesNpi, confStandings, conferences, isFinal, winnerOf, loserOf, isTie, resultFor, regularSeasonDone, regSeasonChamp, regSeasonChamps, quadrants } from './standings.js?v=20261122165654';
-import { generatePoll } from './polls.js?v=20261122165654';
-import { hashStr } from './util.js?v=20261122165654';
+import { blankGame, DAY_ORDER } from './schedule.js?v=20261122170205';
+import { sameConf, records, rpi, rating, indexName, usesNpi, confStandings, conferences, isFinal, winnerOf, loserOf, isTie, resultFor, regularSeasonDone, regSeasonChamp, regSeasonChamps, quadrants } from './standings.js?v=20261122170205';
+import { generatePoll } from './polls.js?v=20261122170205';
+import { hashStr } from './util.js?v=20261122170205';
 
 // ---------- tournament format ----------
 
@@ -705,7 +705,9 @@ export function mcwsVenue(season) {
 // conference tournament, regional or super regional game is at the event
 // host's field, even when the host isn't playing in it.
 export function gameVenue(season, g) {
-  if (g.type === 'mcws') { const v = mcwsVenue(season); return { host: null, stadium: v.stadium, city: v.city }; }
+  // Football's semifinals are at the higher seed's stadium (not neutral):
+  // only the championship game is at the finals site.
+  if (g.type === 'mcws' && g.neutral) { const v = mcwsVenue(season); return { host: null, stadium: v.stadium, city: v.city }; }
   // A neutral arena: a preseason tournament, a showcase, a regional site.
   if (g.venue) return { host: null, stadium: g.venue.stadium || '', city: g.venue.city || '' };
   const host = g.site || (g.neutral ? (['conf', 'regional', 'super'].includes(g.type) ? allEvents(season).find(ev => ev.id === g.event)?.host : null) : g.home) || null;

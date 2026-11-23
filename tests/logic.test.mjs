@@ -272,6 +272,8 @@ check('a 24-team field: seeds 1 to 16 show, the rest unseeded; the full order st
   simGames(s, g => g.type === 'regular');
   simGames(s, () => true, { autoLock: true });
   assert.equal(s.post.field.length, 24);
+  assert.deepEqual(s.post.regionals.map(e => e.name), ['Region 1', 'Region 2', 'Region 3', 'Region 4']);
+  assert.ok(s.games.filter(g => g.type === 'regional').every(g => /^Region [1-4] · /.test(g.label)), 'game labels');
   for (const f of s.post.field) assert.equal(shownSeed(s, f.team), f.seed <= SEEDED ? f.seed : null, f.team);
   const seedOf = t => s.post.field.find(f => f.team === t).seed, W = postWeeks(s);
   for (const g of s.games.filter(g => g.type !== 'regular' && g.week !== W.final)) assert.ok(seedOf(g.home) < seedOf(g.away), g.label);

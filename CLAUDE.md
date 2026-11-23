@@ -100,7 +100,8 @@ unless the owner asks.
   `mcwsVenue` (FirstBank Stadium, Nashville). Seeds 1 to `SEEDED` (16) show
   on screen and the rest of a bigger field is unseeded (`shownSeed`,
   `regionalSeed`; the owner's rule, Nov. 2026); the full order still sets
-  the bracket and the hosts. Week names come from
+  the bracket and the hosts. The four brackets are Region 1 to 4
+  (`regionName`; older saves renamed in `citySiteNames`). Week names come from
   `postWeeks(season).rounds` (First Round, Quarterfinals, Semifinals,
   Championship). Internal names stay `regionals`, `supers`, `mcws`; on
   screen it's the AAU Championship, never NCAA, Final Four or MCWS.

@@ -15,10 +15,10 @@
 // supers and mcws. The format is locked into the season when the field is
 // announced.
 
-import { blankGame, DAY_ORDER } from './schedule.js?v=20261122165319';
-import { sameConf, records, rpi, rating, indexName, usesNpi, confStandings, conferences, isFinal, winnerOf, loserOf, isTie, resultFor, regularSeasonDone, regSeasonChamp, regSeasonChamps, quadrants } from './standings.js?v=20261122165319';
-import { generatePoll } from './polls.js?v=20261122165319';
-import { hashStr } from './util.js?v=20261122165319';
+import { blankGame, DAY_ORDER } from './schedule.js?v=20261122165654';
+import { sameConf, records, rpi, rating, indexName, usesNpi, confStandings, conferences, isFinal, winnerOf, loserOf, isTie, resultFor, regularSeasonDone, regSeasonChamp, regSeasonChamps, quadrants } from './standings.js?v=20261122165654';
+import { generatePoll } from './polls.js?v=20261122165654';
+import { hashStr } from './util.js?v=20261122165654';
 
 // ---------- tournament format ----------
 
@@ -930,6 +930,8 @@ export function siteName(season, school) {
   return city || school;
 }
 
+export const regionName = i => `Region ${i + 1}`;
+
 // Older saves named regionals and super regionals after the host school.
 // Renames those (and their games) after the host's city. Names that don't
 // follow the old pattern are left alone.
@@ -953,6 +955,8 @@ export function citySiteNames(season) {
     for (const n of ev.nodes || []) if (n.label === 'Regional final') n.label = 'Super regional';
     for (const g of season.games) if (g.event === ev.id && g.label?.endsWith(' · Regional final')) g.label = g.label.replace(/ · Regional final$/, ' · Super regional');
   }
+  // Football regions were named after their top seed; now Region 1 to 4.
+  (p.regionals || []).forEach((ev, i) => { if (ev.bySeed && ev.name === `${ev.top} Region`) rename(ev, regionName(ev.path ?? i)); });
   for (const ev of p.regionals || []) {
     if (/ Site$/.test(ev.name || '')) rename(ev, ev.name.replace(/ Site$/, ' Regional'));
     for (const n of ev.nodes || []) if (n.code === 'Site final') n.code = 'Regional final';
@@ -1022,7 +1026,8 @@ export function lockField(season) {
       id: `reg-${i + 1}`, kind: regionalKind(teams.length), seeds: teams, host: home ? null : teams[0], top: teams[0], homeSites: home, campusRounds: home ? p.cfg.campusRounds || 0 : 0,
       ...(site ? { venue: { stadium: site.stadium, city: site.city } } : {}),
       nodes: regionalNodes(teams.length, twoWeeksOf(p.cfg), !!p.cfg.weekly), champion: null, ...(p.cfg.weekly ? { bySeed: true } : {}),
-      name: site?.name ? `${site.name} Region` : home ? `${teams[0]} Region` : `${siteName(season, teams[0])} Regional`, path: i,
+      // Football: Region 1 to 4 (the owner's rule, Nov. 2026).
+      name: p.cfg.weekly ? regionName(i) : site?.name ? `${site.name} Region` : home ? `${teams[0]} Region` : `${siteName(season, teams[0])} Regional`, path: i,
     };
   });
   if (!home) uniqueSiteNames(p.regionals, 'Regional');

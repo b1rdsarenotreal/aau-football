@@ -97,8 +97,10 @@ unless the owner asks.
   one round a week from the week after the regular season, every game at
   the higher national seed's stadium (`bySeed`) through the semifinals, then
   the championship game on the Monday `finalGap` (3) weeks later at
-  `mcwsVenue` (FirstBank Stadium, Nashville). Everyone shows a national
-  seed, 1 to N (`shownSeed`, `regionalSeed`). Week names come from
+  `mcwsVenue` (FirstBank Stadium, Nashville). Seeds 1 to `SEEDED` (16) show
+  on screen and the rest of a bigger field is unseeded (`shownSeed`,
+  `regionalSeed`; the owner's rule, Nov. 2026); the full order still sets
+  the bracket and the hosts. Week names come from
   `postWeeks(season).rounds` (First Round, Quarterfinals, Semifinals,
   Championship). Internal names stay `regionals`, `supers`, `mcws`; on
   screen it's the AAU Championship, never NCAA, Final Four or MCWS.

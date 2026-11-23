@@ -5,7 +5,7 @@ import { simulateGame, matchOdds, simulatedWinRate, ovr } from '../js/sim.js';
 import { confTarget, dateOf, generateSchedule, isFiller, FCS_OPPONENTS, DEFAULT_RIVALRIES, MARQUEE_MAX } from '../js/schedule.js';
 import { isFinal, rating, records, indexName, confStandings, confPct } from '../js/standings.js';
 import { bcs, computerRanks, COMPUTERS } from '../js/bcs.js';
-import { postWeeks, autoBids, aqConferences, fieldSize, ncaaConfig, shownSeed, setAtLarge, selectionBoard } from '../js/postseason.js';
+import { postWeeks, autoBids, aqConferences, fieldSize, ncaaConfig, shownSeed, SEEDED, setAtLarge, selectionBoard } from '../js/postseason.js';
 import { homeAwayRuns, MAX_AWAY, MAX_HOME } from '../js/homeaway.js';
 import { seedTeams, COACHES, PROGRAM_INFO } from '../js/data.js';
 import { recordBook } from '../js/records.js';
@@ -264,6 +264,17 @@ check('a season: regular-season champions take the bids, 16-team field, a round 
   assert.equal(s2.year, 2034);
   assert.ok(s2.coachPolls[0] && s2.carryCoachPoll);
   assert.ok(recordBook(L).games.length > 400);
+});
+
+check('a 24-team field: seeds 1 to 16 show, the rest unseeded; the full order still hosts', () => {
+  const L = newLeague({ year: 2033 }), s = currentSeason(L);
+  s.settings.ncaa = { ...(s.settings.ncaa || {}), regionals: 4, perRegional: 6 };
+  simGames(s, g => g.type === 'regular');
+  simGames(s, () => true, { autoLock: true });
+  assert.equal(s.post.field.length, 24);
+  for (const f of s.post.field) assert.equal(shownSeed(s, f.team), f.seed <= SEEDED ? f.seed : null, f.team);
+  const seedOf = t => s.post.field.find(f => f.team === t).seed, W = postWeeks(s);
+  for (const g of s.games.filter(g => g.type !== 'regular' && g.week !== W.final)) assert.ok(seedOf(g.home) < seedOf(g.away), g.label);
 });
 
 check('saved leagues load', () => {

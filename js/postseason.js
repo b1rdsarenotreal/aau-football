@@ -15,10 +15,10 @@
 // supers and mcws. The format is locked into the season when the field is
 // announced.
 
-import { blankGame, DAY_ORDER } from './schedule.js?v=20261122140949';
-import { sameConf, records, rpi, rating, indexName, usesNpi, confStandings, conferences, isFinal, winnerOf, loserOf, isTie, resultFor, regularSeasonDone, regSeasonChamp, regSeasonChamps, quadrants } from './standings.js?v=20261122140949';
-import { generatePoll } from './polls.js?v=20261122140949';
-import { hashStr } from './util.js?v=20261122140949';
+import { blankGame, DAY_ORDER } from './schedule.js?v=20261122165319';
+import { sameConf, records, rpi, rating, indexName, usesNpi, confStandings, conferences, isFinal, winnerOf, loserOf, isTie, resultFor, regularSeasonDone, regSeasonChamp, regSeasonChamps, quadrants } from './standings.js?v=20261122165319';
+import { generatePoll } from './polls.js?v=20261122165319';
+import { hashStr } from './util.js?v=20261122165319';
 
 // ---------- tournament format ----------
 
@@ -57,15 +57,19 @@ export function ncaaConfig(season) {
 // national seeds, one per regional) carry a national seed on screen. Inside a
 // regional every team shows its regional seed instead (regionalSeed).
 export function regionalSeed(season, team) {
-  // Football: one field seeded 1 to N; every team shows its national seed.
+  // Football: one field seeded 1 to 16; every seeded team shows it.
   if (ncaaConfig(season).weekly) return shownSeed(season, team);
   const ev = season.post?.regionals?.find(e => e.seeds.includes(team));
   return ev ? ev.seeds.indexOf(team) + 1 : null;
 }
+// Football shows seeds 1 to SEEDED (16); the rest of a bigger field is
+// unseeded on screen (the owner's rule, Nov. 2026). The bracket still places
+// and hosts by the full order.
+export const SEEDED = 16;
 export function shownSeed(season, team) {
   const p = season.post;
   const f = p?.field?.find(x => x.team === team), cfg = ncaaConfig(season);
-  if (cfg.weekly) return f ? f.seed : null;
+  if (cfg.weekly) return f && f.seed <= (cfg.seeded ?? SEEDED) ? f.seed : null;
   return f && f.seed <= (noRegionals(cfg) ? cfg.wsSize : cfg.regionals) ? f.seed : null;
 }
 

@@ -21,7 +21,7 @@
 // `bcs(season)` comes back in the shape the shared code uses for its index
 // (value in `rpi`, plus `rank` and `sosRank`).
 
-import { isFinal, winnerOf, resultFor, rpi } from './standings.js?v=20261122204637';
+import { isFinal, winnerOf, resultFor, rpi } from './standings.js?v=20261123152841';
 
 export const COMPUTERS = [
   ['colley', 'Colley'], ['bradley', 'Bradley'], ['rpi', 'RPI'], ['elo', 'Elo'], ['keener', 'Keener'], ['billings', 'Billings'],

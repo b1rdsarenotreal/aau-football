@@ -116,8 +116,11 @@ unless the owner asks.
   (`teamHero`, `ts2-*`), Postseason → Full bracket (`renderBoard`). Navy
   `--board`, gold `--optic`; Oswald, Saira Condensed, Inter.
 - The Greater South, Horizon Valley, WAC, Rocky West and Colonial 10
-  logos, conference logo links (`js/conf-links.js`) and realignment from AAU Dynasty (`js/realign.js`)
-  work as in the other apps.
+  logos, conference logo links (`js/conf-links.js`) and realignment from
+  AAU Dynasty (`js/realign.js`) work as in the other apps. The Rocky West,
+  Horizon Valley and Colonial 10 schools are in the Add team pick
+  (`AAU_SCHOOLS`, `crop: 4`; ESPN logos; stadiums in `CROP4` in
+  `js/aau-schools.js` for the 22 with football), not in the starting league.
 
 ## Before every commit
 

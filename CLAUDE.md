@@ -115,8 +115,8 @@ unless the owner asks.
   (`gameCard`), standings (`st-*`), the poll board (`pb-*`), team pages
   (`teamHero`, `ts2-*`), Postseason → Full bracket (`renderBoard`). Navy
   `--board`, gold `--optic`; Oswald, Saira Condensed, Inter.
-- The Greater South, Horizon Valley and WAC logos, conference logo links
-  (`js/conf-links.js`) and realignment from AAU Dynasty (`js/realign.js`)
+- The Greater South, Horizon Valley, WAC, Rocky West and Colonial 10
+  logos, conference logo links (`js/conf-links.js`) and realignment from AAU Dynasty (`js/realign.js`)
   work as in the other apps.
 
 ## Before every commit
